@@ -761,7 +761,6 @@ describe("compileStyleWithLightningCss", () => {
       `:not(:global(.x)) { color: red; }`,
       ":not(.x)[data-v-test] { color: red; }",
     ],
-    ["global inside :is()", `:is(:global(.x)) { color: red; }`, ".x { color: red; }"],
     ["global inside :where()", `:where(:global(.x)) { color: red; }`, ":where(.x) { color: red; }"],
     [
       "mixed local and global branches inside :is()",
@@ -788,6 +787,26 @@ describe("compileStyleWithLightningCss", () => {
 
     expect(result.errors).toHaveLength(0);
     expect(normalizeCssOutput(result.code)).toBe(expected);
+  });
+
+  test("global inside :is() keeps the global branch unscoped", () => {
+    const result = compileStyleWithLightningCss({
+      source: `:is(:global(.x)) { color: red; }`,
+      filename: "test.css",
+      id: "data-v-test",
+      scoped: true,
+    });
+
+    expect(result.errors).toHaveLength(0);
+
+    const code = normalizeCssOutput(result.code);
+
+    // Single-branch `:is(...)` is printer-dependent here: preserving
+    // `:is(.x)` and simplifying it to `.x` are both semantically correct.
+    expect([
+      ".x { color: red; }",
+      ":is(.x) { color: red; }",
+    ]).toContain(code);
   });
 
   test.each([
