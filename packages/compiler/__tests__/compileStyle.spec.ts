@@ -761,7 +761,18 @@ describe("compileStyleWithLightningCss", () => {
       `:not(:global(.x)) { color: red; }`,
       ":not(.x)[data-v-test] { color: red; }",
     ],
-    ["global inside :is()", `:is(:global(.x)) { color: red; }`, ".x[data-v-test] { color: red; }"],
+    ["global inside :is()", `:is(:global(.x)) { color: red; }`, ".x { color: red; }"],
+    ["global inside :where()", `:where(:global(.x)) { color: red; }`, ":where(.x) { color: red; }"],
+    [
+      "mixed local and global branches inside :is()",
+      `:is(.foo, :global(.x)) { color: red; }`,
+      ":is(.foo[data-v-test], .x) { color: red; }",
+    ],
+    [
+      "mixed local and global branches inside :where()",
+      `:where(.foo, :global(.x)) { color: red; }`,
+      ":where(.foo[data-v-test], .x) { color: red; }",
+    ],
     [
       "global inside :has()",
       `:has(:global(.x)) { color: red; }`,

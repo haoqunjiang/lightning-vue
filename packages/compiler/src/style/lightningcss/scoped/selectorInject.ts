@@ -52,6 +52,7 @@ function injectScopeIntoContainer(
 ): ExpandedScopedSelector {
   let nestedDeep = deep;
   const container = selector[anchorIndex] as SelectorContainerSelector;
+  const originalNestedSelectors = container.selectors;
   const nestedSelectors = container.selectors.map((nestedSelector) => {
     const nestedResult = placeScopeAttributes(
       {
@@ -72,7 +73,13 @@ function injectScopeIntoContainer(
 
   if (
     injectMode !== "none" &&
-    shouldInjectContainerScope(container, nestedSelectors, injectMode, helpers)
+    shouldInjectContainerScope(
+      container,
+      originalNestedSelectors,
+      nestedSelectors,
+      injectMode,
+      helpers,
+    )
   ) {
     const scopedAttribute =
       injectMode === "slot"
@@ -158,6 +165,19 @@ function selectorContainsScopeAttribute(selector: Selector, scopeAttributeName: 
   });
 }
 
+function selectorContainsNoInjectMarker(selector: Selector): boolean {
+  return selector.some((component) => {
+    if (isNoInjectMarker(component)) {
+      return true;
+    }
+
+    return (
+      isSelectorContainer(component) &&
+      component.selectors.some((nestedSelector) => selectorContainsNoInjectMarker(nestedSelector))
+    );
+  });
+}
+
 function selectorSatisfiesContainerScope(
   selector: Selector,
   injectMode: ScopeInjectMode,
@@ -175,6 +195,7 @@ function selectorSatisfiesContainerScope(
 
 function shouldInjectContainerScope(
   container: SelectorContainerSelector,
+  originalNestedSelectors: Selector[],
   nestedSelectors: Selector[],
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
@@ -184,6 +205,8 @@ function shouldInjectContainerScope(
   }
 
   return nestedSelectors.some(
-    (nestedSelector) => !selectorSatisfiesContainerScope(nestedSelector, injectMode, helpers),
+    (nestedSelector, index) =>
+      !selectorSatisfiesContainerScope(nestedSelector, injectMode, helpers) &&
+      !selectorContainsNoInjectMarker(originalNestedSelectors[index]),
   );
 }
