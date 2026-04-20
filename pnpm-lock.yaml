@@ -40,6 +40,37 @@ importers:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.18(@types/node@24.12.2)(sass@1.99.0)(typescript@5.9.3)(vite@8.0.8(@types/node@24.12.2)(sass@1.99.0))'
 
+  apps/divergence-playground:
+    dependencies:
+      '@lightning-vue/compiler':
+        specifier: workspace:*
+        version: link:../../packages/compiler
+      '@vue/compiler-sfc':
+        specifier: 3.5.32
+        version: 3.5.32
+      lightningcss-wasm:
+        specifier: ^1.30.2
+        version: 1.32.0
+      monaco-editor:
+        specifier: ^0.52.2
+        version: 0.52.2
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
+      vue:
+        specifier: ^3.5.32
+        version: 3.5.32(typescript@5.9.3)
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.6
+        version: 6.0.6(@voidzero-dev/vite-plus-core@0.1.18(@types/node@24.12.2)(sass@1.99.0)(typescript@5.9.3))(vue@3.5.32(typescript@5.9.3))
+      vite:
+        specifier: npm:@voidzero-dev/vite-plus-core@latest
+        version: '@voidzero-dev/vite-plus-core@0.1.18(@types/node@24.12.2)(sass@1.99.0)(typescript@5.9.3)'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 0.1.18(@types/node@24.12.2)(@voidzero-dev/vite-plus-core@0.1.18(@types/node@24.12.2)(sass@1.99.0)(typescript@5.9.3))(sass@1.99.0)(typescript@5.9.3)
+
   apps/sfc-playground:
     dependencies:
       '@lightning-vue/compiler':
@@ -1004,6 +1035,9 @@ packages:
   merge-source-map@1.1.0:
     resolution: {integrity: sha512-Qkcp7P2ygktpMPh2mCQZaf3jhN6D3Z/qVZHSdWvQ+2Ef5HgRAPBO57A77+ENm0CPx2+1Ce/MYKi3ymqdfuqibw==}
 
+  monaco-editor@0.52.2:
+    resolution: {integrity: sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ==}
+
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
     engines: {node: '>=10'}
@@ -1059,6 +1093,10 @@ packages:
   postcss@8.5.10:
     resolution: {integrity: sha512-pMMHxBOZKFU6HgAZ4eyGnwXF/EvPGGqUr0MnZ5+99485wwW41kW91A4LOGxSHhgugZmSChL5AlElNdwlNgcnLQ==}
     engines: {node: ^10 || ^12 || >=14}
+
+  prismjs@1.30.0:
+    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
+    engines: {node: '>=6'}
 
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
@@ -1812,6 +1850,8 @@ snapshots:
     dependencies:
       source-map: 0.6.1
 
+  monaco-editor@0.52.2: {}
+
   mrmime@2.0.1: {}
 
   nanoid@3.3.11: {}
@@ -1894,6 +1934,8 @@ snapshots:
       nanoid: 3.3.11
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  prismjs@1.30.0: {}
 
   process-nextick-args@2.0.1: {}
 
