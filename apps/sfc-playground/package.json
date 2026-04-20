@@ -1,0 +1,25 @@
+{
+  "name": "sfc-playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @lightning-vue/compiler build && vite",
+    "build": "pnpm --filter @lightning-vue/compiler build && vite build",
+    "check": "pnpm --filter @lightning-vue/compiler build && vp check src package.json vite.config.ts tsconfig.json"
+  },
+  "dependencies": {
+    "@lightning-vue/compiler": "workspace:*",
+    "@vue/repl": "4.7.1",
+    "@vue/server-renderer": "^3.5.32",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "lightningcss-wasm": "^1.32.0",
+    "vue": "^3.5.32"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.6",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

@@ -33,13 +33,18 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./browser": {
+      "types": "./dist/browser.d.mts",
+      "import": "./dist/browser.mjs",
+      "require": "./dist/browser.cjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "vp pack src/index.ts --format esm --format cjs --dts",
+    "build": "vp pack",
     "test": "vp test run",
     "bench": "vp test bench __tests__/compileStyle.bench.ts",
     "check": "vp check src __tests__ package.json README.md ARCHITECTURE.md vite.config.ts tsconfig.json",

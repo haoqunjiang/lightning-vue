@@ -1,29 +1,36 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite-plus";
 
-export default defineConfig(() => {
-  const isTest = process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
+const compilerDir = fileURLToPath(new URL(".", import.meta.url));
 
-  return {
+export default defineConfig({
+  define: {
+    __ESM_BROWSER__: "false",
+    __GLOBAL__: "false",
+  },
+  pack: {
+    entry: ["src/index.ts", "src/browser.ts"],
+    format: ["esm", "cjs"],
+    dts: true,
     define: {
       __ESM_BROWSER__: "false",
       __GLOBAL__: "false",
-      __TEST__: JSON.stringify(isTest),
     },
-    resolve: {
-      alias: {
-        "@lightning-vue/utils": path.resolve(__dirname, "../utils/src/index.ts"),
-      },
+  },
+  resolve: {
+    alias: {
+      "@lightning-vue/utils": path.resolve(compilerDir, "../utils/src/index.ts"),
     },
-    test: {
-      globals: true,
+  },
+  test: {
+    globals: true,
+  },
+  lint: {
+    options: {
+      typeAware: true,
+      typeCheck: true,
     },
-    lint: {
-      options: {
-        typeAware: true,
-        typeCheck: true,
-      },
-    },
-    fmt: {},
-  };
+  },
+  fmt: {},
 });

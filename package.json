@@ -9,9 +9,12 @@
     "test": "vp run -r test",
     "bench": "vp run compiler#bench",
     "check": "vp run -r check",
-    "sync:tests": "node tools/sync-vue-tests.mjs"
+    "sync:tests": "node tools/sync-vue-tests.mjs",
+    "dev:playground": "vp run sfc-playground#dev",
+    "dev:example": "vp run vite-example#dev"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.6",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
