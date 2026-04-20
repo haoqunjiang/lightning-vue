@@ -68,4 +68,7 @@ export const curatedCases: DivergenceCase[] = [
   },
 ];
 
-export const defaultPlaygroundSource = `.a:is(:deep(.foo)) { color: red; }`;
+export const defaultPlaygroundSource = `:is(:deep(.a .b .c))
+{
+  color: red;
+}`;
