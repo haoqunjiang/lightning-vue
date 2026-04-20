@@ -1,0 +1,64 @@
+{
+  "name": "@lightning-vue/compiler",
+  "version": "3.5.32",
+  "description": "Vue SFC compiler module with a Lightning CSS-backed style compiler",
+  "keywords": [
+    "compiler-sfc",
+    "lightningcss",
+    "sfc",
+    "vue"
+  ],
+  "homepage": "https://github.com/lightning-vue/lightning-vue/tree/main/packages/compiler#readme",
+  "bugs": {
+    "url": "https://github.com/lightning-vue/lightning-vue/issues"
+  },
+  "license": "MIT",
+  "author": "Haoqun Jiang <npm@haoqun.me>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lightning-vue/lightning-vue.git",
+    "directory": "packages/compiler"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack src/index.ts --format esm --format cjs --dts",
+    "test": "vp test run",
+    "bench": "vp test bench __tests__/compileStyle.bench.ts",
+    "check": "vp check src __tests__ package.json README.md ARCHITECTURE.md vite.config.ts tsconfig.json",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@lightning-vue/utils": "workspace:*",
+    "@vue/compiler-core": "3.5.32",
+    "@vue/compiler-sfc": "3.5.32",
+    "@vue/shared": "3.5.32",
+    "hash-sum": "^2.0.0",
+    "magic-string": "^0.30.21",
+    "merge-source-map": "^1.1.0"
+  },
+  "devDependencies": {
+    "lightningcss": "^1.32.0",
+    "sass": "^1.99.0"
+  },
+  "peerDependencies": {
+    "lightningcss": "^1.32.0"
+  }
+}
