@@ -82,13 +82,13 @@ result:
 `;
 
 exports[`nesting normalization trace > 'mixed local and deep branches warn co…' 1`] = `
-"source: :is(:deep(.shell), .pane) {
+"source: .layout :is(:deep(.shell), .pane) {
   color: red;
   .title { color: blue; }
 }
 
 instructions:
-  - style ":is(:deep(.shell), .pane)"
+  - style ".layout :is(:deep(.shell), .pane)"
     context.inherited=none
     context.wrapper=none
     instructions.kind=style
@@ -112,7 +112,7 @@ instructions:
 result:
   - normalized=true
   - introducedScopedSelectorSpecials=true
-  - code=":global(:is(:deep(.shell), .pane)) {\\n  & {color: red;}\\n  .title { color: blue; }\\n}""
+  - code=":global(.layout :is(:deep(.shell), .pane)) {\\n  & {color: red;}\\n  .title { color: blue; }\\n}""
 `;
 
 exports[`nesting normalization trace > 'outer deep context keeps the parent r…' 1`] = `

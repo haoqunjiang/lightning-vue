@@ -13,40 +13,22 @@ export interface DivergenceCase {
 
 export const curatedCases: DivergenceCase[] = [
   {
-    title: "Compound local anchor before deep inside :is()",
-    source: `.a:is(:deep(.foo)) { color: red; }`,
-    note: "This now looks more like a PostCSS issue. Lightning lowers the selector to the same descendant shape as `.a:deep(.foo)`, while PostCSS still leaves `:deep()` unresolved inside `:is()`.",
+    title: "Descendant anchor before deep-only :is() branch",
+    source: `.card :is(:deep(.title)) { color: red; }`,
+    note: "This now looks more like a PostCSS issue. Lightning lowers the nested deep branch into the same descendant shape as `.card :deep(.title)`, while PostCSS still leaves `:deep()` unresolved inside `:is()`.",
     kind: "likely-postcss-bug",
   },
   {
-    title: "Compound local anchor with descendant deep branch",
-    source: `.a:is(.b :deep(.c)) { color: red; }`,
-    note: "This also now looks more like a PostCSS issue. Lightning keeps `.a` and `.b` locally scoped while preserving the deep escape on `.c`, whereas PostCSS still leaves `:deep()` unresolved inside `:is()`.",
+    title: "Descendant anchor with local prefix before deep inside :is()",
+    source: `.card :is(.header :deep(.icon)) { color: red; }`,
+    note: "This also now looks more like a PostCSS issue. Lightning keeps `.card` and `.header` locally scoped while preserving the deep escape on `.icon`, whereas PostCSS still leaves `:deep()` unresolved inside `:is()`.",
     kind: "likely-postcss-bug",
   },
   {
-    title: "Multiple deep branches inside :is()",
-    source: `.a:is(:deep(.b), :deep(.c)) { color: red; }`,
-    note: "Lightning now keeps both deep branches as descendants of the local `.a` anchor, while PostCSS still leaves the two `:deep()` branches unresolved inside `:is()`.",
+    title: "Nested :where(:deep(...)) inside descendant-side :is()",
+    source: `.card :is(:where(:deep(.title))) { color: red; }`,
+    note: "Lightning lowers the nested `:where(:deep(...))` branch into descendant semantics from `.card`, while PostCSS still preserves the unresolved carrier structure inside `:is()`.",
     kind: "likely-postcss-bug",
-  },
-  {
-    title: "Nested :where(:deep(...)) inside :is()",
-    source: `.a:is(:where(:deep(.b))) { color: red; }`,
-    note: "Lightning lowers the nested `:where(:deep(...))` branch into descendant semantics from `.a`, while PostCSS still preserves the unresolved carrier structure inside `:is()`.",
-    kind: "likely-postcss-bug",
-  },
-  {
-    title: "Ancestor before bare deep branch in :is()",
-    source: `.shell :is(:deep(.foo)) { color: red; }`,
-    note: "This now looks more like a PostCSS issue. Lightning matches the existing `.shell :deep(.foo)` lowering shape, while PostCSS leaves :deep() unresolved inside :is().",
-    kind: "likely-postcss-bug",
-  },
-  {
-    title: "Nested same-element branch before mixed deep/local :is()",
-    source: `.root:is(.a:is(:deep(.b), .c)) { color: red; }`,
-    note: "This is a known Lightning limitation for now. The nested `.a` branch still targets the same element as `.root`, but the current lowering can add an extra local scope attribute there. Matching stays the same, while specificity may become higher than in the PostCSS output.",
-    kind: "lightning-limit",
   },
   {
     title: "Carrier inside :nth-child(... of ...)",

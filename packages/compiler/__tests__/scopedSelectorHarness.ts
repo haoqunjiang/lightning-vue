@@ -50,10 +50,10 @@ export function createScopedSelectorBenchHarness(): ScopedSelectorBenchHarness {
   );
   const structuredSelectors = parseSelectorCorpus(
     Array.from({ length: 30 }, (_, index) => [
-      `.a-${index}:is(:deep(.b-${index}), .c-${index})`,
-      `.shell-${index}:is(:where(:deep(.branch-${index})), .leaf-${index})`,
-      `.outer-${index}:where(:deep(.target-${index})).copy-${index}`,
-      `.outer-${index}:is(:deep(.target-${index})) > .copy-${index}`,
+      `.card-${index} :is(.header-${index} :deep(.icon-${index}))`,
+      `.card-${index} :is(:deep(.title-${index}), .copy-${index})`,
+      `.shell-${index} :is(:where(:deep(.branch-${index})), .leaf-${index})`,
+      `.outer-${index} :where(:deep(.target-${index})) > .copy-${index}`,
     ]).flat(),
   );
 

@@ -20,10 +20,7 @@ import {
 } from "../style/lightningcss/scoped/selector/placement";
 import { removeNoInjectMarkers } from "../style/lightningcss/scoped/selector/placement/cleanup";
 import { normalizeSelectorForPlacement } from "../style/lightningcss/scoped/selector/placement/structure";
-import {
-  placementPlanNeedsNestedRewrite,
-  placementPlanNeedsNormalization,
-} from "../style/lightningcss/scoped/types";
+import { placementPlanNeedsNormalization } from "../style/lightningcss/scoped/types";
 import type {
   ExpandedScopedSelector,
   PlacedScopedSelector,
@@ -39,7 +36,6 @@ export interface ScopedSelectorTraceCase {
 
 interface TracedExpandedState {
   deep: boolean;
-  nestedRewrite: boolean;
   placement: string;
   selector: string;
 }
@@ -73,20 +69,20 @@ export const scopedSelectorTraceCases: ScopedSelectorTraceCase[] = [
     selector: ".card .title:where(:hover) > .leaf",
   },
   {
-    title: "deep-only :is branch lowers to a descendant",
-    selector: ".a:is(:deep(.foo))",
+    title: "descendant-side deep-only :is branch lowers to a descendant",
+    selector: ".card :is(:deep(.title))",
   },
   {
-    title: "local prefix before deep inside :is() stays on the same element",
-    selector: ".a:is(.b :deep(.c))",
+    title: "descendant-side local prefix before deep inside :is() stays on the same element",
+    selector: ".card :is(.header :deep(.icon))",
   },
   {
-    title: "mixed same-element and descendant branches split before placement",
-    selector: ".a:is(:where(:deep(.b)), .c)",
+    title: "descendant-side mixed same-element and descendant branches split before placement",
+    selector: ".card :is(:where(:deep(.title)), .copy)",
   },
   {
     title: "outer :deep() keeps nested containers on the unscoped side",
-    selector: ".x:deep(.a:is(:deep(.b), .c))",
+    selector: ".dialog:deep(.panel :is(:deep(.icon), .copy))",
   },
   {
     title: "slotted selectors keep their slot-scoped inner branch unscoped afterward",
@@ -128,7 +124,7 @@ export function formatScopedSelectorTrace(trace: ScopedSelectorTrace): string {
     lines.push("", "expansion:");
     for (const [index, state] of trace.expansion.entries()) {
       lines.push(
-        `  ${index + 1}. placement=${state.placement} deep=${state.deep} nestedRewrite=${state.nestedRewrite} ${state.selector}`,
+        `  ${index + 1}. placement=${state.placement} deep=${state.deep} ${state.selector}`,
       );
     }
   }
@@ -248,7 +244,6 @@ function isSelectorList(selectors: Selector | Selector[]): selectors is Selector
 function traceExpandedState(result: ExpandedScopedSelector): TracedExpandedState {
   return {
     deep: result.deep,
-    nestedRewrite: placementPlanNeedsNestedRewrite(result.placement),
     placement: result.placement,
     selector: stringifySelector(result.selector),
   };

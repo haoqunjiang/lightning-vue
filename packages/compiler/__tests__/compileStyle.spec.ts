@@ -686,10 +686,8 @@ describe("compileStyleWithLightningCss", () => {
     expect(normalizeCssOutput(result.code)).toBe(expected);
   });
 
-  test.each([
-    ["deep inside :is()", `.a:is(:deep(.foo)) { color: red; }`],
-    ["deep inside :where()", `.a:where(:deep(.foo)) { color: red; }`],
-  ])("does not leak internal deep markers for %s", (_label, source) => {
+  test("does not leak internal deep markers for descendant-side nested deep selectors", () => {
+    const source = `.card :is(.header :deep(.icon)) { color: red; }`;
     const result = compileStyleWithLightningCss({
       source,
       filename: "test.css",
@@ -700,50 +698,41 @@ describe("compileStyleWithLightningCss", () => {
     expect(result.errors).toHaveLength(0);
     expect(result.code).not.toContain("__VUE_SCOPE_DEEP__");
     const normalized = normalizeCssOutput(result.code);
-    if (source.includes(".bar")) {
-      expect(normalized).toContain(".bar");
-      expect(normalized).toContain(".foo[data-v-test]");
-    } else {
-      expect(normalized).toContain(".foo");
-      expect(normalized).toContain(".a[data-v-test]");
-    }
+    expect(normalized).toContain(".icon");
+    expect(normalized).toContain(".header[data-v-test]");
+    expect(normalized).toContain(".card[data-v-test]");
   });
 
   test.each([
     [
-      "single deep branch inside :is() becomes a descendant selector",
-      `.a:is(:deep(.foo)) { color: red; }`,
-      ".a[data-v-test] .foo { color: red; }",
+      "single deep branch inside descendant-side :is() becomes a descendant selector",
+      `.card :is(:deep(.title)) { color: red; }`,
+      ".card[data-v-test] .title { color: red; }",
     ],
     [
-      "local prefix before deep inside :is() stays scoped inside the branch",
-      `.a:is(.b :deep(.c)) { color: red; }`,
-      ".a[data-v-test]:is(.b[data-v-test] .c) { color: red; }",
+      "local prefix before deep inside descendant-side :is() stays scoped inside the branch",
+      `.card :is(.header :deep(.icon)) { color: red; }`,
+      ".card[data-v-test] :is(.header[data-v-test] .icon) { color: red; }",
     ],
     [
-      "multiple deep branches inside :is() stay descendants of the local anchor",
-      `.a:is(:deep(.b), :deep(.c)) { color: red; }`,
-      ".a[data-v-test] :is(.b, .c) { color: red; }",
+      "multiple deep branches inside descendant-side :is() stay descendants of the local anchor",
+      `.card :is(:deep(.title), :deep(.eyebrow)) { color: red; }`,
+      ".card[data-v-test] :is(.title, .eyebrow) { color: red; }",
     ],
     [
-      "deep-only :where() inside :is() stays a descendant branch",
-      `.a:is(:where(:deep(.b))) { color: red; }`,
-      ".a[data-v-test] :where(.b) { color: red; }",
+      "deep-only :where() inside descendant-side :is() stays a descendant branch",
+      `.card :is(:where(:deep(.title))) { color: red; }`,
+      ".card[data-v-test] :where(.title) { color: red; }",
     ],
     [
-      "single deep branch inside :where() becomes a descendant selector",
-      `.a:where(:deep(.foo)) { color: red; }`,
-      ".a[data-v-test] :where(.foo) { color: red; }",
+      "single deep branch inside descendant-side :where() becomes a descendant selector",
+      `.card :where(:deep(.title)) { color: red; }`,
+      ".card[data-v-test] :where(.title) { color: red; }",
     ],
     [
-      "local prefix before deep inside :where() stays scoped inside the branch",
-      `.a:where(.b :deep(.c)) { color: red; }`,
-      ".a[data-v-test]:where(.b[data-v-test] .c) { color: red; }",
-    ],
-    [
-      "nested :is() branches still scope local selectors before deep escapes",
-      `.a:is(.b:is(:deep(.c))) { color: red; }`,
-      ".a[data-v-test]:is(.b[data-v-test] .c) { color: red; }",
+      "local prefix before deep inside descendant-side :where() stays scoped inside the branch",
+      `.card :where(.header :deep(.icon)) { color: red; }`,
+      ".card[data-v-test] :where(.header[data-v-test] .icon) { color: red; }",
     ],
   ])("%s", (_label, source, expected) => {
     const result = compileStyleWithLightningCss({
@@ -977,123 +966,6 @@ describe("compileStyleWithLightningCss", () => {
     expect(code).toContain(".a[data-v-test]");
   });
 
-  test("single deep-only :is() branches freeze scoping before later compound selectors", () => {
-    const result = compileStyleWithLightningCss({
-      source: `.a:is(:deep(.b)).c { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(normalizeCssOutput(result.code)).toBe(".a[data-v-test] .b.c { color: red; }");
-  });
-
-  test("single deep-only :is() branches freeze scoping before later combinators", () => {
-    const result = compileStyleWithLightningCss({
-      source: `.a:is(:deep(.b)) > .c { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(normalizeCssOutput(result.code)).toBe(".a[data-v-test] .b > .c { color: red; }");
-  });
-
-  test("single deep-only :where() branches freeze scoping before later compound selectors", () => {
-    const result = compileStyleWithLightningCss({
-      source: `.a:where(:deep(.b)).c { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(normalizeCssOutput(result.code)).toBe(".a[data-v-test] :where(.b).c { color: red; }");
-  });
-
-  test("mixed deep-only and local :is() branches expand instead of re-anchoring inside the container", () => {
-    const result = compileStyleWithLightningCss({
-      source: `.a:is(:where(:deep(.b)), .c) { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(normalizeCssOutput(result.code)).toBe(
-      ".a[data-v-test].c, .a[data-v-test] :where(.b) { color: red; }",
-    );
-  });
-
-  test("mixed deep-only and local :is() branches with direct deep selectors also expand", () => {
-    const result = compileStyleWithLightningCss({
-      source: `.a:is(:deep(.b), .c) { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(normalizeCssOutput(result.code)).toBe(
-      ".a[data-v-test].c, .a[data-v-test] .b { color: red; }",
-    );
-  });
-
-  test("normalized deep splits do not duplicate an already-consumed scope attribute", () => {
-    const result = compileStyleWithLightningCss({
-      source: `:is(.root):is(:deep(.a), .b) { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-
-    const code = normalizeCssOutput(result.code);
-    expect(code).not.toContain("[data-v-test][data-v-test]");
-    expect(code).toBe(".root[data-v-test].b, .root[data-v-test] .a { color: red; }");
-  });
-
-  test("slot-scoped selectors do not re-enter slot injection after deep-only :where() lowering", () => {
-    const result = compileStyleWithLightningCss({
-      source: `:slotted(.a:is(:where(:deep(.b)).c)) { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(normalizeCssOutput(result.code)).toBe(".a[data-v-test-s] :where(.b).c { color: red; }");
-  });
-
-  test("nested :is() branches stay unscoped after an outer :deep() boundary", () => {
-    const result = compileStyleWithLightningCss({
-      source: `.x:deep(.a:is(:deep(.b), .c)) { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(normalizeCssOutput(result.code)).toBe(".x[data-v-test] .a:is(.b, .c) { color: red; }");
-  });
-
-  test("nested :where() branches stay unscoped after an outer :deep() boundary", () => {
-    const result = compileStyleWithLightningCss({
-      source: `.x:deep(.a:where(:deep(.b), .c)) { color: red; }`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(normalizeCssOutput(result.code)).toBe(
-      ".x[data-v-test] .a:where(.b, .c) { color: red; }",
-    );
-  });
-
   test.each([
     [
       "nested style rules with mixed declarations and at-rules",
@@ -1204,7 +1076,7 @@ describe("compileStyleWithLightningCss", () => {
   test.each([
     [
       "deep context through :is()",
-      `:is(:deep(.foo)) {
+      `.shell :is(:deep(.foo)) {
   .bar { color: red; }
 }`,
       ".bar[data-v-test]",

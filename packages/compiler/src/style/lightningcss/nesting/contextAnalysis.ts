@@ -27,8 +27,8 @@ function createNestedScopeAnalysis(
  * Returns the nesting context established for later nested descendants.
  *
  * This is broader than “deep context”: it also tracks slot context and mixed
- * branch lists like `:is(:deep(.x), .y)` that force normalization to keep the
- * current rule in ordinary local mode.
+ * branch lists that force normalization to keep the current rule in ordinary
+ * local mode.
  */
 export function analyzeSelectorNestingContext(prelude: string): NestedScopeAnalysis {
   try {

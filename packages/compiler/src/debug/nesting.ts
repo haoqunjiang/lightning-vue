@@ -53,7 +53,7 @@ export const nestingNormalizationTraceCases: NestingNormalizationTraceCase[] = [
   },
   {
     title: "mixed local and deep branches warn conservatively",
-    source: `:is(:deep(.shell), .pane) {
+    source: `.layout :is(:deep(.shell), .pane) {
   color: red;
   .title { color: blue; }
 }`,

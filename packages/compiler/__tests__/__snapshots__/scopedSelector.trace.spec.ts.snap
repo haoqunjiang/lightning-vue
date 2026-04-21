@@ -1,25 +1,73 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`'deep-only :is branch lowers to a desc…' 1`] = `
-"source: .a:is(:deep(.foo))
+exports[`'descendant-side deep-only :is branch …' 1`] = `
+"source: .card :is(:deep(.title))
 injectMode: normal
 path: expanded
 
 expansion:
-  1. placement=normalize-and-rewrite deep=true nestedRewrite=true .a:is([__VUE_SCOPE_DEEP__] .foo)
+  1. placement=normalize-and-rewrite deep=true .card :is([__VUE_SCOPE_DEEP__] .title)
 
 placement input:
   1. placement=normalize-and-rewrite effectiveMode=normal
-     - .a[__VUE_SCOPE_DEEP__] .foo
+     - .card [__VUE_SCOPE_DEEP__] .title
 
 placement:
-  1. deep=true .a[data-v-trace][__VUE_SCOPE_DEEP__] .foo
+  1. deep=true .card[data-v-trace] [__VUE_SCOPE_DEEP__] .title
 
 cleanup:
-  - .a[data-v-trace] .foo
+  - .card[data-v-trace]  .title
 
 final:
-  - .a[data-v-trace] .foo"
+  - .card[data-v-trace]  .title"
+`;
+
+exports[`'descendant-side local prefix before d…' 1`] = `
+"source: .card :is(.header :deep(.icon))
+injectMode: normal
+path: expanded
+
+expansion:
+  1. placement=rewrite-nested deep=true .card :is(.header [__VUE_SCOPE_DEEP__].icon)
+
+placement input:
+  1. placement=rewrite-nested effectiveMode=normal
+     - .card :is(.header [__VUE_SCOPE_DEEP__].icon)
+
+placement:
+  1. deep=true .card[data-v-trace] :is(.header[data-v-trace] [__VUE_SCOPE_DEEP__].icon)
+
+cleanup:
+  - .card[data-v-trace] :is(.header[data-v-trace] .icon)
+
+final:
+  - .card[data-v-trace] :is(.header[data-v-trace] .icon)"
+`;
+
+exports[`'descendant-side mixed same-element an…' 1`] = `
+"source: .card :is(:where(:deep(.title)), .copy)
+injectMode: normal
+path: expanded
+
+expansion:
+  1. placement=normalize-and-rewrite deep=true .card :is(:where([__VUE_SCOPE_DEEP__] .title), .copy)
+
+placement input:
+  1. placement=normalize-and-rewrite effectiveMode=normal
+     - .card :is(.copy)
+     - .card [__VUE_SCOPE_DEEP__] :where(.title)
+
+placement:
+  1. deep=true .card[data-v-trace] :is(.copy)
+  2. deep=true .card[data-v-trace] [__VUE_SCOPE_DEEP__] :where(.title)
+
+cleanup:
+  - .card[data-v-trace] :is(.copy)
+  - .card[data-v-trace]  :where(.title)
+
+final:
+  - .card[data-v-trace] :is(.copy)
+  - .card[data-v-trace]  :where(.title)"
 `;
 
 exports[`'direct selector rewrite' 1`] = `
@@ -34,74 +82,26 @@ final:
   - .card .title:where(:hover) > .leaf[data-v-trace]"
 `;
 
-exports[`'local prefix before deep inside :is()…' 1`] = `
-"source: .a:is(.b :deep(.c))
-injectMode: normal
-path: expanded
-
-expansion:
-  1. placement=rewrite-nested deep=true nestedRewrite=true .a:is(.b [__VUE_SCOPE_DEEP__].c)
-
-placement input:
-  1. placement=rewrite-nested effectiveMode=normal
-     - .a:is(.b [__VUE_SCOPE_DEEP__].c)
-
-placement:
-  1. deep=true .a[data-v-trace]:is(.b[data-v-trace] [__VUE_SCOPE_DEEP__].c)
-
-cleanup:
-  - .a[data-v-trace]:is(.b[data-v-trace] .c)
-
-final:
-  - .a[data-v-trace]:is(.b[data-v-trace] .c)"
-`;
-
-exports[`'mixed same-element and descendant bra…' 1`] = `
-"source: .a:is(:where(:deep(.b)), .c)
-injectMode: normal
-path: expanded
-
-expansion:
-  1. placement=normalize-and-rewrite deep=true nestedRewrite=true .a:is(:where([__VUE_SCOPE_DEEP__] .b), .c)
-
-placement input:
-  1. placement=normalize-and-rewrite effectiveMode=normal
-     - .a:is(.c)
-     - .a[__VUE_SCOPE_DEEP__] :where(.b)
-
-placement:
-  1. deep=true .a[data-v-trace]:is(.c)
-  2. deep=true .a[data-v-trace][__VUE_SCOPE_DEEP__] :where(.b)
-
-cleanup:
-  - .a[data-v-trace]:is(.c)
-  - .a[data-v-trace] :where(.b)
-
-final:
-  - .a[data-v-trace]:is(.c)
-  - .a[data-v-trace] :where(.b)"
-`;
-
 exports[`'outer :deep() keeps nested containers…' 1`] = `
-"source: .x:deep(.a:is(:deep(.b), .c))
+"source: .dialog:deep(.panel :is(:deep(.icon), .copy))
 injectMode: normal
 path: expanded
 
 expansion:
-  1. placement=rewrite-nested deep=true nestedRewrite=true .x[__VUE_SCOPE_DEEP__] .a:is([__VUE_SCOPE_DEEP__] .b, .c)
+  1. placement=rewrite-nested deep=true .dialog[__VUE_SCOPE_DEEP__] .panel :is([__VUE_SCOPE_DEEP__] .icon, .copy)
 
 placement input:
   1. placement=rewrite-nested effectiveMode=normal
-     - .x[__VUE_SCOPE_DEEP__] .a:is([__VUE_SCOPE_DEEP__] .b, .c)
+     - .dialog[__VUE_SCOPE_DEEP__] .panel :is([__VUE_SCOPE_DEEP__] .icon, .copy)
 
 placement:
-  1. deep=true .x[data-v-trace][__VUE_SCOPE_DEEP__] .a:is([__VUE_SCOPE_DEEP__] .b, .c)
+  1. deep=true .dialog[data-v-trace][__VUE_SCOPE_DEEP__] .panel :is([__VUE_SCOPE_DEEP__] .icon, .copy)
 
 cleanup:
-  - .x[data-v-trace] .a:is(.b, .c)
+  - .dialog[data-v-trace] .panel :is(.icon, .copy)
 
 final:
-  - .x[data-v-trace] .a:is(.b, .c)"
+  - .dialog[data-v-trace] .panel :is(.icon, .copy)"
 `;
 
 exports[`'slotted selectors keep their slot-sco…' 1`] = `
@@ -110,7 +110,7 @@ injectMode: normal
 path: expanded
 
 expansion:
-  1. placement=direct deep=false nestedRewrite=false [__VUE_SCOPE_NO_INJECT__].a[data-v-trace-s]:is(.b)
+  1. placement=direct deep=false [__VUE_SCOPE_NO_INJECT__].a[data-v-trace-s]:is(.b)
 
 placement input:
   1. placement=direct effectiveMode=none
