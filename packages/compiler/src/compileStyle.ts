@@ -13,16 +13,16 @@ import {
 } from "./style/preprocessors";
 import {
   type CSSModulesOptions,
-  type StyleCompileContext,
-  type StyleCompileState,
-  createStyleCompileContext,
-  createStyleCompileSession,
-  createStyleCompileState,
-  finalizeStyleCompileFailure,
-  finalizeStyleCompileSuccess,
-  prepareStyleCompileSessionForTransform,
-  transformPreparedStyleCompileSession,
-} from "./styleCompile";
+  type CompileContext,
+  type CompileState,
+  createCompileContext,
+  createCompileSession,
+  createCompileState,
+  finalizeCompileFailure,
+  finalizeCompileSuccess,
+  prepareCompileSessionForTransform,
+  transformPreparedCompileSession,
+} from "./compileSession";
 
 export type {
   SFCAsyncStyleCompileOptions,
@@ -74,27 +74,27 @@ function compileStyleWithLightningCssImpl(
     );
   }
 
-  const context = createStyleCompileContext(options);
-  const state = createInitialStyleCompileState(options, context);
-  const session = createStyleCompileSession(context, state);
-  if (!prepareStyleCompileSessionForTransform(session)) {
-    return finalizeStyleCompileFailure(session);
+  const context = createCompileContext(options);
+  const state = createInitialCompileState(options, context);
+  const session = createCompileSession(context, state);
+  if (!prepareCompileSessionForTransform(session)) {
+    return finalizeCompileFailure(session);
   }
 
   try {
     const lightningcss = loadLightningCss(context.filename);
-    const result = transformPreparedStyleCompileSession(lightningcss, session);
-    return finalizeStyleCompileSuccess(result, session);
+    const result = transformPreparedCompileSession(lightningcss, session);
+    return finalizeCompileSuccess(result, session);
   } catch (e: any) {
     state.errors.push(e);
-    return finalizeStyleCompileFailure(session);
+    return finalizeCompileFailure(session);
   }
 }
 
-function createInitialStyleCompileState(
+function createInitialCompileState(
   options: SFCStyleCompileOptions | SFCAsyncStyleCompileOptions,
-  context: StyleCompileContext,
-): StyleCompileState {
+  context: CompileContext,
+): CompileState {
   const initialInputMap = options.inMap || options.map;
   const preprocessor = options.preprocessLang && processors[options.preprocessLang];
   const preProcessedSource = preprocessor && preprocess(options, preprocessor, context.sourceMap);
@@ -103,7 +103,7 @@ function createInitialStyleCompileState(
   const dependencies = new Set(preProcessedSource ? preProcessedSource.dependencies : []);
   dependencies.delete(context.filename);
 
-  return createStyleCompileState(
+  return createCompileState(
     source,
     (preProcessedSource ? preProcessedSource.map : initialInputMap) as RawSourceMap | undefined,
     context,

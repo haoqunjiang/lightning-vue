@@ -1,16 +1,16 @@
 import { test } from "vitest";
 import { compileStyleAsync, compileStyleWithLightningCss } from "../src/compileStyle";
 import {
-  formatStyleCompileTrace,
-  resolveStyleCompileTraceOptions,
-  styleCompileTraceCases,
-  traceStyleCompile,
-} from "../src/debug/styleCompile";
+  compileSessionTraceCases,
+  formatCompileSessionTrace,
+  resolveCompileSessionTraceOptions,
+  traceCompileSession,
+} from "../src/debug/compileSession";
 
-test.each(styleCompileTraceCases)("$title", ({ options }) => {
+test.each(compileSessionTraceCases)("$title", ({ options }) => {
   return expect(
-    traceStyleCompile(options).then(async (trace) => {
-      const resolved = resolveStyleCompileTraceOptions(options);
+    traceCompileSession(options).then(async (trace) => {
+      const resolved = resolveCompileSessionTraceOptions(options);
       const publicResult =
         "modules" in resolved && resolved.modules
           ? await compileStyleAsync(resolved)
@@ -24,7 +24,7 @@ test.each(styleCompileTraceCases)("$title", ({ options }) => {
         trace.final.some((line) => line === `dependencies=${publicResult.dependencies.size}`),
       ).toBe(true);
 
-      return formatStyleCompileTrace(trace);
+      return formatCompileSessionTrace(trace);
     }),
   ).resolves.toMatchSnapshot();
 });

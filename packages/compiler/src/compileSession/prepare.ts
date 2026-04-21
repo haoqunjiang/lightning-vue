@@ -2,9 +2,9 @@ import { rewriteCssVarsInStyleSource, rewriteCssVarsInStyleSourceWithMap } from 
 import { deriveAnalysisAfterNestedNormalization } from "../style/lightningcss/analysis";
 import { normalizeNestedStyleBlocks } from "../style/lightningcss/nesting/normalize";
 import { findLegacyVueScopedSyntaxError } from "../style/lightningcss/scoped/legacy";
-import type { StyleCompileSession } from "./types";
+import type { CompileSession } from "./types";
 
-export function rewriteCssVarsInSession(session: StyleCompileSession): void {
+export function rewriteCssVarsInSession(session: CompileSession): void {
   const { context, state } = session;
   if (!state.analysis.hasVBind) {
     return;
@@ -25,7 +25,7 @@ export function rewriteCssVarsInSession(session: StyleCompileSession): void {
   }
 }
 
-export function normalizeNestedStylesInSession(session: StyleCompileSession): void {
+export function normalizeNestedStylesInSession(session: CompileSession): void {
   const { context, state } = session;
   if (!context.scoped || !state.analysis.hasNestedStyleRules) {
     return;
@@ -49,7 +49,7 @@ export function normalizeNestedStylesInSession(session: StyleCompileSession): vo
   });
 }
 
-export function prepareStyleCompileSessionForTransform(session: StyleCompileSession): boolean {
+export function prepareCompileSessionForTransform(session: CompileSession): boolean {
   const { context, state } = session;
   const legacyScopedSyntaxError = context.scoped && findLegacyVueScopedSyntaxError(state.source);
 

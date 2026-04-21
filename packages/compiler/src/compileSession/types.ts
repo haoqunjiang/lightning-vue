@@ -4,7 +4,7 @@ import { analyzeLightningCssStyle } from "../style/lightningcss/analysis";
 
 export type CSSModulesOptions = NonNullable<SFCAsyncStyleCompileOptions["modulesOptions"]>;
 
-export interface StyleCompileContext {
+export interface CompileContext {
   filename: string;
   id: string;
   isProd: boolean;
@@ -15,7 +15,7 @@ export interface StyleCompileContext {
   sourceMap: boolean;
 }
 
-export interface StyleCompileState {
+export interface CompileState {
   analysis: ReturnType<typeof analyzeLightningCssStyle>;
   dependencies: Set<string>;
   errors: Error[];
@@ -23,12 +23,12 @@ export interface StyleCompileState {
   source: string;
 }
 
-export interface StyleCompileSession {
-  context: StyleCompileContext;
-  state: StyleCompileState;
+export interface CompileSession {
+  context: CompileContext;
+  state: CompileState;
 }
 
-export interface StyleTransformPlan {
+export interface TransformPlan {
   code: string;
   cssModules: { pattern: string } | {} | undefined;
   includeNesting: boolean;
@@ -41,4 +41,4 @@ export interface LightningCssRuntime {
   transform: (options: any) => any;
 }
 
-export type StyleCompileOptions = SFCStyleCompileOptions | SFCAsyncStyleCompileOptions;
+export type CompileOptions = SFCStyleCompileOptions | SFCAsyncStyleCompileOptions;

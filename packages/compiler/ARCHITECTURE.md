@@ -39,11 +39,11 @@ The browser-facing entrypoint is
 [src/browser.ts](./src/browser.ts). The Node and browser compilers keep their
 option validation, runtime loading, and preprocessing policy separate, but they
 share the same middle pipeline in
-[src/styleCompile/](./src/styleCompile/):
+[src/compileSession/](./src/compileSession/):
 
-- build a `StyleCompileSession`
+- build a `CompileSession`
 - prepare source-only rewrites
-- derive a `StyleTransformPlan` and run Lightning CSS
+- derive a `TransformPlan` and run Lightning CSS
 - finalize the public `SFCStyleCompileResults`
 
 ## First Principles
@@ -110,7 +110,7 @@ surface:
 - no CSS modules
 - no PostCSS-specific plugin pipeline
 
-After that edge-specific validation, it rejoins the same shared style pipeline
+After that edge-specific validation, it rejoins the same shared compile-session flow
 as the Node entrypoint.
 
 ### 2. Reject Legacy Vue Scoped Syntax
@@ -454,8 +454,8 @@ target.
 The codebase keeps the major style stages observable in tests instead of making
 them debugger-only concepts:
 
-- `styleCompile.trace.spec.ts`
-  traces the shared style-compile session, transform plan, and final result
+- `compileSession.trace.spec.ts`
+  traces the shared compile session, transform plan, and final result
 - `nestingNormalization.trace.spec.ts`
   traces nested-block instructions and the final normalized source
 - `scopedSelector.trace.spec.ts`
@@ -537,14 +537,14 @@ Top-level orchestration:
 
 - validate
 - preprocess
-- create the shared style pipeline state
-- run the shared style pipeline
+- create the shared compile session
+- run the shared compile-session flow
 
-### `src/styleCompile/`
+### `src/compileSession/`
 
-Shared style-compilation stages used by both the Node and browser entrypoints:
+Shared compile-session stages used by both the Node and browser entrypoints:
 
-- `context.ts`
+- `session.ts`
   compile context, initial mutable state, and session creation
 - `prepare.ts`
   pre-transform source preparation

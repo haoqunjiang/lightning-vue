@@ -12,9 +12,9 @@ export {
   traceScopedSelector,
 } from "./debug/scopedSelector";
 
-export type { StyleCompileTrace, StyleCompileTraceCase } from "./debug/styleCompile";
+export type { CompileSessionTrace, CompileSessionTraceCase } from "./debug/compileSession";
 export {
-  formatStyleCompileTrace,
-  styleCompileTraceCases,
-  traceStyleCompile,
-} from "./debug/styleCompile";
+  compileSessionTraceCases,
+  formatCompileSessionTrace,
+  traceCompileSession,
+} from "./debug/compileSession";

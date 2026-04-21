@@ -1,23 +1,23 @@
 import { Features, transform } from "lightningcss";
 import type { SFCAsyncStyleCompileOptions } from "@vue/compiler-sfc";
 import {
-  type StyleCompileOptions,
-  createStyleCompileContext,
-  createStyleCompileSession,
-  createStyleCompileState,
-  createStyleTransformPlan,
-  finalizeStyleCompileFailure,
-  finalizeStyleCompileSuccess,
-  prepareStyleCompileSessionForTransform,
-  transformPreparedStyleCompileSession,
-} from "../styleCompile";
+  type CompileOptions,
+  createCompileContext,
+  createCompileSession,
+  createCompileState,
+  createTransformPlan,
+  finalizeCompileFailure,
+  finalizeCompileSuccess,
+  prepareCompileSessionForTransform,
+  transformPreparedCompileSession,
+} from "../compileSession";
 
-export interface StyleCompileTraceCase {
+export interface CompileSessionTraceCase {
   options: Partial<SFCAsyncStyleCompileOptions> & Pick<SFCAsyncStyleCompileOptions, "source">;
   title: string;
 }
 
-export interface StyleCompileTrace {
+export interface CompileSessionTrace {
   context: string[];
   final: string[];
   finalCode: string;
@@ -34,7 +34,7 @@ const lightningcss = {
   transform,
 };
 
-export const styleCompileTraceCases: StyleCompileTraceCase[] = [
+export const compileSessionTraceCases: CompileSessionTraceCase[] = [
   {
     title: "simple scoped source path",
     options: {
@@ -79,7 +79,7 @@ export const styleCompileTraceCases: StyleCompileTraceCase[] = [
 ];
 
 /**
- * Traces the shared style-compile flow at the stage boundaries we treat as
+ * Traces the shared compile-session flow at the stage boundaries we treat as
  * stable architecture:
  *
  * 1. context/session creation
@@ -92,18 +92,18 @@ export const styleCompileTraceCases: StyleCompileTraceCase[] = [
  * phase contracts observable so refactors can be judged against something more
  * concrete than “this still feels right”.
  */
-export async function traceStyleCompile(
+export async function traceCompileSession(
   traceOptions: Partial<SFCAsyncStyleCompileOptions> & Pick<SFCAsyncStyleCompileOptions, "source">,
-): Promise<StyleCompileTrace> {
-  const options = resolveStyleCompileTraceOptions(traceOptions);
-  const context = createStyleCompileContext(options);
-  const state = createStyleCompileState(options.source, options.inMap || options.map, context);
-  const session = createStyleCompileSession(context, state);
+): Promise<CompileSessionTrace> {
+  const options = resolveCompileSessionTraceOptions(traceOptions);
+  const context = createCompileContext(options);
+  const state = createCompileState(options.source, options.inMap || options.map, context);
+  const session = createCompileSession(context, state);
 
-  const trace: StyleCompileTrace = {
+  const trace: CompileSessionTrace = {
     source: options.source,
-    context: formatStyleCompileContext(context),
-    initial: formatStyleCompileState("initial", state),
+    context: formatCompileContext(context),
+    initial: formatCompileState("initial", state),
     prepared: [],
     preparedSource: state.source,
     transform: [],
@@ -112,29 +112,29 @@ export async function traceStyleCompile(
     finalCode: "",
   };
 
-  const prepared = prepareStyleCompileSessionForTransform(session);
-  trace.prepared = [`prepared=${prepared}`, ...formatStyleCompileState("prepared", session.state)];
+  const prepared = prepareCompileSessionForTransform(session);
+  trace.prepared = [`prepared=${prepared}`, ...formatCompileState("prepared", session.state)];
   trace.preparedSource = session.state.source;
 
   if (!prepared) {
-    const failedResult = finalizeStyleCompileFailure(session);
-    trace.final = formatStyleCompileResult(failedResult);
+    const failedResult = finalizeCompileFailure(session);
+    trace.final = formatCompileResult(failedResult);
     trace.finalCode = failedResult.code;
     return trace;
   }
 
-  const transformPlan = createStyleTransformPlan(session);
-  trace.transform = formatStyleTransformPlan(transformPlan);
+  const transformPlan = createTransformPlan(session);
+  trace.transform = formatTransformPlan(transformPlan);
   trace.transformCode = transformPlan.code;
 
-  const transformResult = transformPreparedStyleCompileSession(lightningcss, session);
-  const manualResult = finalizeStyleCompileSuccess(transformResult, session);
-  trace.final = formatStyleCompileResult(manualResult);
+  const transformResult = transformPreparedCompileSession(lightningcss, session);
+  const manualResult = finalizeCompileSuccess(transformResult, session);
+  trace.final = formatCompileResult(manualResult);
   trace.finalCode = manualResult.code;
   return trace;
 }
 
-export function formatStyleCompileTrace(trace: StyleCompileTrace): string {
+export function formatCompileSessionTrace(trace: CompileSessionTrace): string {
   return [
     `source: ${trace.source}`,
     "",
@@ -155,9 +155,9 @@ export function formatStyleCompileTrace(trace: StyleCompileTrace): string {
   ].join("\n");
 }
 
-export function resolveStyleCompileTraceOptions(
+export function resolveCompileSessionTraceOptions(
   options: Partial<SFCAsyncStyleCompileOptions> & Pick<SFCAsyncStyleCompileOptions, "source">,
-): StyleCompileOptions {
+): CompileOptions {
   return {
     filename: options.filename || "trace.css",
     id: options.id || "data-v-trace",
@@ -177,9 +177,7 @@ export function resolveStyleCompileTraceOptions(
   };
 }
 
-function formatStyleCompileContext(
-  context: ReturnType<typeof createStyleCompileContext>,
-): string[] {
+function formatCompileContext(context: ReturnType<typeof createCompileContext>): string[] {
   return [
     `filename=${context.filename}`,
     `scoped=${context.scoped}`,
@@ -189,10 +187,7 @@ function formatStyleCompileContext(
   ];
 }
 
-function formatStyleCompileState(
-  label: string,
-  state: ReturnType<typeof createStyleCompileState>,
-): string[] {
+function formatCompileState(label: string, state: ReturnType<typeof createCompileState>): string[] {
   return [
     `${label}.source=${JSON.stringify(state.source)}`,
     `${label}.analysis=nested:${state.analysis.hasNestedStyleRules} specials:${state.analysis.hasScopedSelectorSpecials} animations:${state.analysis.hasAnimationDeclarations} keyframes:${Object.keys(state.analysis.keyframes).length}`,
@@ -202,7 +197,7 @@ function formatStyleCompileState(
   ];
 }
 
-function formatStyleTransformPlan(plan: ReturnType<typeof createStyleTransformPlan>): string[] {
+function formatTransformPlan(plan: ReturnType<typeof createTransformPlan>): string[] {
   return [
     `code=${JSON.stringify(plan.code)}`,
     `selectorsScopedInSource=${plan.selectorsScopedInSource}`,
@@ -212,9 +207,7 @@ function formatStyleTransformPlan(plan: ReturnType<typeof createStyleTransformPl
   ];
 }
 
-function formatStyleCompileResult(
-  result: ReturnType<typeof finalizeStyleCompileFailure>,
-): string[] {
+function formatCompileResult(result: ReturnType<typeof finalizeCompileFailure>): string[] {
   return [
     `code=${JSON.stringify(result.code)}`,
     `map=${!!result.map}`,

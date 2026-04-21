@@ -16,7 +16,7 @@ export default defineConfig({
       "src/debug.ts",
       "src/debug/nesting.ts",
       "src/debug/scopedSelector.ts",
-      "src/debug/styleCompile.ts",
+      "src/debug/compileSession.ts",
     ],
     format: ["esm", "cjs"],
     dts: true,

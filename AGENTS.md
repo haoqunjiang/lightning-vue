@@ -17,6 +17,6 @@ Use that workflow for changes touching any of:
 
 - `packages/compiler/src/style/lightningcss/scoped/**`
 - `packages/compiler/src/style/lightningcss/nesting/**`
-- `packages/compiler/src/styleCompile/**`
+- `packages/compiler/src/compileSession/**`
 - `packages/compiler/__tests__/scopedSelector*`
 - `packages/compiler/ARCHITECTURE.md`

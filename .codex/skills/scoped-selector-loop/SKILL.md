@@ -9,7 +9,7 @@ Use this skill when changing the scoped-style pipeline, especially:
 
 - `packages/compiler/src/style/lightningcss/scoped/**`
 - `packages/compiler/src/style/lightningcss/nesting/**`
-- `packages/compiler/src/styleCompile/**`
+- `packages/compiler/src/compileSession/**`
 - `packages/compiler/__tests__/scopedSelector*`
 - `packages/compiler/ARCHITECTURE.md`
 
@@ -38,7 +38,7 @@ Use this scoped correctness loop after each meaningful change:
 
 ```bash
 pnpm --filter @lightning-vue/compiler check
-pnpm --filter @lightning-vue/compiler test -- __tests__/compileStyle.spec.ts __tests__/nestedNormalization.spec.ts __tests__/nestingNormalization.trace.spec.ts __tests__/scopedSelector.trace.spec.ts __tests__/styleCompile.trace.spec.ts
+pnpm --filter @lightning-vue/compiler test -- __tests__/compileStyle.spec.ts __tests__/nestedNormalization.spec.ts __tests__/nestingNormalization.trace.spec.ts __tests__/scopedSelector.trace.spec.ts __tests__/compileSession.trace.spec.ts
 git diff --check
 ```
 

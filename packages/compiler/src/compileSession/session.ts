@@ -1,11 +1,6 @@
 import type { RawSourceMap } from "@vue/compiler-core";
 import { analyzeLightningCssStyle } from "../style/lightningcss/analysis";
-import type {
-  StyleCompileContext,
-  StyleCompileOptions,
-  StyleCompileSession,
-  StyleCompileState,
-} from "./types";
+import type { CompileContext, CompileOptions, CompileSession, CompileState } from "./types";
 
 export function shouldGenerateLightningCssSourceMap(
   postcssOptions: any,
@@ -14,10 +9,10 @@ export function shouldGenerateLightningCssSourceMap(
   return !!(inputMap || (postcssOptions && postcssOptions.map));
 }
 
-export function createStyleCompileContext(
-  options: StyleCompileOptions,
-  overrides?: Partial<Pick<StyleCompileContext, "modules" | "modulesOptions" | "sourceMap">>,
-): StyleCompileContext {
+export function createCompileContext(
+  options: CompileOptions,
+  overrides?: Partial<Pick<CompileContext, "modules" | "modulesOptions" | "sourceMap">>,
+): CompileContext {
   const initialInputMap = options.inMap || options.map;
 
   return {
@@ -39,15 +34,15 @@ export function createStyleCompileContext(
   };
 }
 
-export function createStyleCompileState(
+export function createCompileState(
   source: string,
   inputMap: RawSourceMap | undefined,
-  context: StyleCompileContext,
+  context: CompileContext,
   options?: {
     dependencies?: Iterable<string>;
     errors?: Error[];
   },
-): StyleCompileState {
+): CompileState {
   return {
     analysis: analyzeLightningCssStyle(source, context.id),
     dependencies: new Set(options?.dependencies || []),
@@ -57,10 +52,7 @@ export function createStyleCompileState(
   };
 }
 
-export function createStyleCompileSession(
-  context: StyleCompileContext,
-  state: StyleCompileState,
-): StyleCompileSession {
+export function createCompileSession(context: CompileContext, state: CompileState): CompileSession {
   return {
     context,
     state,

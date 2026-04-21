@@ -7,14 +7,14 @@ import type {
 import type { RawSourceMap } from "@vue/compiler-core";
 import {
   type LightningCssRuntime,
-  createStyleCompileContext,
-  createStyleCompileSession,
-  createStyleCompileState,
-  finalizeStyleCompileFailure,
-  finalizeStyleCompileSuccess,
-  prepareStyleCompileSessionForTransform,
-  transformPreparedStyleCompileSession,
-} from "./styleCompile";
+  createCompileContext,
+  createCompileSession,
+  createCompileState,
+  finalizeCompileFailure,
+  finalizeCompileSuccess,
+  prepareCompileSessionForTransform,
+  transformPreparedCompileSession,
+} from "./compileSession";
 
 export type BrowserLightningCssLoader = () => LightningCssRuntime | Promise<LightningCssRuntime>;
 
@@ -39,29 +39,26 @@ async function compileStyleWithLightningCssInBrowser(
     return createBrowserStyleCompileFailureResult(options, error as Error);
   }
 
-  const context = createStyleCompileContext(options, {
+  const context = createCompileContext(options, {
     modules: false,
     modulesOptions: {},
   });
-  const state = createStyleCompileState(
+  const state = createCompileState(
     options.source,
     (options.inMap || options.map) as RawSourceMap | undefined,
     context,
   );
-  const session = createStyleCompileSession(context, state);
-  if (!prepareStyleCompileSessionForTransform(session)) {
-    return finalizeStyleCompileFailure(session);
+  const session = createCompileSession(context, state);
+  if (!prepareCompileSessionForTransform(session)) {
+    return finalizeCompileFailure(session);
   }
 
   try {
     const lightningcss = await loadLightningCss();
-    return finalizeStyleCompileSuccess(
-      transformPreparedStyleCompileSession(lightningcss, session),
-      session,
-    );
+    return finalizeCompileSuccess(transformPreparedCompileSession(lightningcss, session), session);
   } catch (error) {
     state.errors.push(error as Error);
-    return finalizeStyleCompileFailure(session);
+    return finalizeCompileFailure(session);
   }
 }
 

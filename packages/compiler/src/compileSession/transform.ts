@@ -4,13 +4,13 @@ import {
 } from "../style/lightningcss/scoped/source";
 import { createLightningCssStyleVisitor } from "../style/lightningcss/visitor";
 import { createLightningCssModulesConfig } from "./modules";
-import type { LightningCssRuntime, StyleCompileSession, StyleTransformPlan } from "./types";
+import type { CompileSession, LightningCssRuntime, TransformPlan } from "./types";
 
 const textEncoder = new TextEncoder();
 
-export function createStyleTransformPlan(session: StyleCompileSession): StyleTransformPlan {
+export function createTransformPlan(session: CompileSession): TransformPlan {
   const { context, state } = session;
-  const basePlan = createBaseStyleTransformPlan(session);
+  const basePlan = createBaseTransformPlan(session);
   let selectorsScopedInSource = context.scoped && !context.modules;
   if (!selectorsScopedInSource) {
     return {
@@ -57,9 +57,9 @@ export function createStyleTransformPlan(session: StyleCompileSession): StyleTra
   }
 }
 
-function createBaseStyleTransformPlan(
-  session: StyleCompileSession,
-): Omit<StyleTransformPlan, "code" | "selectorsScopedInSource"> {
+function createBaseTransformPlan(
+  session: CompileSession,
+): Omit<TransformPlan, "code" | "selectorsScopedInSource"> {
   const { context, state } = session;
 
   return {
@@ -73,8 +73,8 @@ function createBaseStyleTransformPlan(
 
 function createLightningCssTransformOptions(
   lightningcss: LightningCssRuntime,
-  session: StyleCompileSession,
-  plan: StyleTransformPlan,
+  session: CompileSession,
+  plan: TransformPlan,
 ) {
   const { context, state } = session;
 
@@ -98,10 +98,10 @@ function createLightningCssTransformOptions(
   };
 }
 
-export function transformPreparedStyleCompileSession(
+export function transformPreparedCompileSession(
   lightningcss: LightningCssRuntime,
-  session: StyleCompileSession,
+  session: CompileSession,
 ) {
-  const plan = createStyleTransformPlan(session);
+  const plan = createTransformPlan(session);
   return lightningcss.transform(createLightningCssTransformOptions(lightningcss, session, plan));
 }

@@ -53,10 +53,10 @@
       "import": "./dist/debug/scopedSelector.mjs",
       "require": "./dist/debug/scopedSelector.cjs"
     },
-    "./debug/styleCompile": {
-      "types": "./dist/debug/styleCompile.d.mts",
-      "import": "./dist/debug/styleCompile.mjs",
-      "require": "./dist/debug/styleCompile.cjs"
+    "./debug/compileSession": {
+      "types": "./dist/debug/compileSession.d.mts",
+      "import": "./dist/debug/compileSession.mjs",
+      "require": "./dist/debug/compileSession.cjs"
     },
     "./package.json": "./package.json"
   },

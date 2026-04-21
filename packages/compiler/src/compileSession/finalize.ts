@@ -5,14 +5,14 @@ import {
   rewriteNormalizedAnimationDeclarationsWithMap,
 } from "../style/lightningcss/scoped/animation";
 import { normalizeLightningCssModules } from "./modules";
-import type { StyleCompileSession } from "./types";
+import type { CompileSession } from "./types";
 
 const textDecoder = new TextDecoder();
 
 function rewriteAnimationDeclarationsIfNeeded(
   code: string,
   map: RawSourceMap | undefined,
-  session: StyleCompileSession,
+  session: CompileSession,
 ): { code: string; map: RawSourceMap | undefined } {
   const { context, state } = session;
   const { analysis } = state;
@@ -42,7 +42,7 @@ function rewriteAnimationDeclarationsIfNeeded(
   };
 }
 
-export function finalizeStyleCompileFailure(session: StyleCompileSession): SFCStyleCompileResults {
+export function finalizeCompileFailure(session: CompileSession): SFCStyleCompileResults {
   const { state } = session;
   return {
     code: "",
@@ -53,9 +53,9 @@ export function finalizeStyleCompileFailure(session: StyleCompileSession): SFCSt
   };
 }
 
-export function finalizeStyleCompileSuccess(
+export function finalizeCompileSuccess(
   result: any,
-  session: StyleCompileSession,
+  session: CompileSession,
 ): SFCStyleCompileResults {
   const { context, state } = session;
   const postTransform = rewriteAnimationDeclarationsIfNeeded(
