@@ -1,7 +1,7 @@
 import type { Selector } from "lightningcss";
-import { rewriteDirectScopedSelector } from "./selectorDirect";
-import { canUseDirectScopeRewrite, lowerScopeCarriers } from "./selectorExpand";
-import { cleanupScopedSelectorMarkers, placeScopeAttributes } from "./selectorInject";
+import { rewriteDirectScopedSelector } from "./selector/direct";
+import { canUseDirectScopeRewrite, expandScopeCarriers } from "./selector/expansion";
+import { cleanupScopedSelectorMarkers, placeScopeAttributes } from "./selector/placement";
 import type {
   ExpandedScopedSelector,
   ScopeInjectMode,
@@ -58,8 +58,8 @@ function rewriteExpandedScopedSelector(
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
 ): ScopedSelectorRewriteResult {
-  const lowered = lowerScopedSelectorCarriers(selector, helpers);
-  const scoped = placeScopeAttributesOnLoweredSelectors(lowered, injectMode, helpers);
+  const expanded = expandScopedSelectorCarriers(selector, helpers);
+  const scoped = placeScopeAttributesOnExpandedSelectors(expanded, injectMode, helpers);
   const rewritten = cleanupScopedSelectorResults(scoped);
 
   return {
@@ -68,25 +68,25 @@ function rewriteExpandedScopedSelector(
   };
 }
 
-function lowerScopedSelectorCarriers(
+function expandScopedSelectorCarriers(
   selector: Selector,
   helpers: ScopedSelectorHelpers,
 ): ExpandedScopedSelector[] {
-  // Phase 1: lower Vue-specific carrier syntax into ordinary selector states
+  // Phase 1: expand Vue-specific carrier syntax into ordinary selector states
   // plus internal markers. `:slotted(...)` is the one special case that
   // eagerly materializes slot scope on its inner selectors before they are
   // merged back into the outer selector.
-  return lowerScopeCarriers(selector, helpers);
+  return expandScopeCarriers(selector, helpers);
 }
 
-function placeScopeAttributesOnLoweredSelectors(
-  lowered: ExpandedScopedSelector[],
+function placeScopeAttributesOnExpandedSelectors(
+  expanded: ExpandedScopedSelector[],
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
 ): ExpandedScopedSelector[] {
   // Phase 2: interpret no-inject markers and place component or slot scope
-  // attributes on the lowered selector states.
-  return lowered.map((result) => placeScopeAttributes(result, injectMode, helpers));
+  // attributes on the expanded selector states.
+  return expanded.flatMap((result) => placeScopeAttributes(result, injectMode, helpers));
 }
 
 function cleanupScopedSelectorResults(
@@ -96,6 +96,7 @@ function cleanupScopedSelectorResults(
   // complete, recursively cleaning any selector containers.
   return rewritten.map((result) => ({
     deep: result.deep,
+    placementKind: "direct",
     selector: cleanupScopedSelectorMarkers(result.selector),
   }));
 }

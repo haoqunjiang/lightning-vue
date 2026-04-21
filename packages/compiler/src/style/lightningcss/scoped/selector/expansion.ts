@@ -1,16 +1,17 @@
 import type { Selector, SelectorComponent, SelectorList } from "lightningcss";
 import { extend } from "@vue/shared";
 import { parseSelectorListFromTokens } from "@lightning-vue/utils";
-import type { ScopeCarrierKind } from "../scopeCarriers";
-import { isScopeCarrierSelector, scopeCarrierParserOptions } from "../scopeCarriers";
-import { cloneAttribute, cloneCombinator, isCombinator } from "./context";
-import { isScopeContainer, isSelectorContainer } from "./selectorDirect";
-import { placeScopeAttributes } from "./selectorInject";
+import type { ScopeCarrierKind } from "../../scopeCarriers";
+import { isScopeCarrierSelector, scopeCarrierParserOptions } from "../../scopeCarriers";
+import { cloneAttribute, cloneCombinator, isCombinator, isDeepMarker } from "../context";
+import { placeScopeAttributes } from "./placement";
+import { isScopeContainer, isSelectorContainer } from "./direct";
 import type {
   ExpandedScopedSelector,
+  ScopePlacementKind,
   ScopedSelectorHelpers,
   SelectorContainerSelector,
-} from "./types";
+} from "../types";
 
 interface ScopeCarrier {
   kind: ScopeCarrierKind;
@@ -37,17 +38,17 @@ export function canUseDirectScopeRewrite(selector: Selector): boolean {
   return true;
 }
 
-export function lowerScopeCarriers(
+export function expandScopeCarriers(
   selector: Selector,
   helpers: ScopedSelectorHelpers,
 ): ExpandedScopedSelector[] {
-  // This phase normalizes Vue-specific selector syntax into ordinary selector
-  // states plus a few internal markers that the injection phase understands.
+  // This phase expands Vue-specific selector syntax into ordinary selector
+  // states plus a few internal markers that the placement phase understands.
   //
   // A single input selector may fan out into many output states because carrier
   // pseudos such as `:deep(...)`, `:global(...)`, and `:slotted(...)` can each
   // contain selector lists.
-  let results: ExpandedSelectorStates = [{ deep: false, selector: [] }];
+  let results: ExpandedSelectorStates = [createExpandedSelectorState([], false, "direct")];
 
   for (const component of selector) {
     const carrier = getScopeCarrier(component);
@@ -85,12 +86,15 @@ function expandGlobalCarrier(
 ): ExpandedSelectorStates {
   const expanded: ExpandedSelectorStates = [];
   for (const innerSelector of carrier.selectors) {
-    const innerResults = lowerScopeCarriers(innerSelector, helpers);
+    const innerResults = expandScopeCarriers(innerSelector, helpers);
     for (const result of innerResults) {
-      expanded.push({
-        deep: result.deep,
-        selector: prependNoInjectMarker(result.selector, helpers),
-      });
+      expanded.push(
+        createExpandedSelectorState(
+          prependNoInjectMarker(result.selector, helpers),
+          result.deep,
+          result.placementKind,
+        ),
+      );
     }
   }
   return expanded;
@@ -103,23 +107,26 @@ function expandSlottedCarrier(
 ): ExpandedSelectorStates {
   // Slotted selectors are the one place where expansion must eagerly apply slot
   // scope to the carrier payload before it is merged back into the outer
-  // selector. The later injection phase should not scope the merged selector
+  // selector. The later placement phase should not scope the merged selector
   // again, so we prepend the no-inject marker afterward.
   const slotScopedInnerSelectors: ExpandedSelectorStates = [];
   for (const innerSelector of carrier.selectors) {
-    const innerResults = lowerScopeCarriers(innerSelector, helpers);
+    const innerResults = expandScopeCarriers(innerSelector, helpers);
     for (const result of innerResults) {
-      slotScopedInnerSelectors.push(placeScopeAttributes(result, "slot", helpers));
+      slotScopedInnerSelectors.push(...placeScopeAttributes(result, "slot", helpers));
     }
   }
 
   const expanded: ExpandedSelectorStates = [];
   for (const state of results) {
     for (const innerSelector of slotScopedInnerSelectors) {
-      expanded.push({
-        deep: state.deep || innerSelector.deep,
-        selector: prependNoInjectMarker([...state.selector, ...innerSelector.selector], helpers),
-      });
+      expanded.push(
+        createExpandedSelectorState(
+          prependNoInjectMarker([...state.selector, ...innerSelector.selector], helpers),
+          state.deep || innerSelector.deep,
+          state.placementKind,
+        ),
+      );
     }
   }
 
@@ -134,12 +141,15 @@ function expandDeepCarrier(
   const expanded: ExpandedSelectorStates = [];
   for (const state of results) {
     for (const innerSelector of carrier.selectors) {
-      const innerResults = lowerScopeCarriers(innerSelector, helpers);
+      const innerResults = expandScopeCarriers(innerSelector, helpers);
       for (const result of innerResults) {
-        expanded.push({
-          deep: true,
-          selector: appendDeepSelector(state.selector, result.selector, helpers),
-        });
+        expanded.push(
+          createExpandedSelectorState(
+            appendDeepSelector(state.selector, result.selector, helpers),
+            true,
+            state.placementKind,
+          ),
+        );
       }
     }
   }
@@ -152,11 +162,13 @@ function appendSelectorContainer(
   helpers: ScopedSelectorHelpers,
 ): ExpandedSelectorStates {
   let nestedDeep = false;
+  const nestedResults: ExpandedScopedSelector[] = [];
   const nestedSelectors: SelectorList = [];
   for (const nestedSelector of component.selectors) {
-    const nestedResults = lowerScopeCarriers(nestedSelector, helpers);
-    for (const result of nestedResults) {
+    const expandedResults = expandScopeCarriers(nestedSelector, helpers);
+    for (const result of expandedResults) {
       nestedDeep ||= result.deep;
+      nestedResults.push(result);
       nestedSelectors.push(result.selector);
     }
   }
@@ -168,6 +180,10 @@ function appendSelectorContainer(
   for (const state of results) {
     if (isScopeContainer(component)) {
       state.deep ||= nestedDeep;
+      state.placementKind = mergeScopePlacementKinds(
+        state.placementKind,
+        scopeContainerNeedsNormalizedPlacement(nestedResults) ? "normalized" : "direct",
+      );
     }
     state.selector.push(nextComponent);
   }
@@ -213,4 +229,34 @@ function appendDeepSelector(
 
 function prependNoInjectMarker(selector: Selector, helpers: ScopedSelectorHelpers): Selector {
   return [cloneAttribute(helpers.noInjectMarker), ...selector];
+}
+
+function createExpandedSelectorState(
+  selector: Selector,
+  deep: boolean,
+  placementKind: ScopePlacementKind,
+): ExpandedScopedSelector {
+  return {
+    deep,
+    placementKind,
+    selector,
+  };
+}
+
+function mergeScopePlacementKinds(
+  left: ScopePlacementKind,
+  right: ScopePlacementKind,
+): ScopePlacementKind {
+  return left === "normalized" || right === "normalized" ? "normalized" : "direct";
+}
+
+function scopeContainerNeedsNormalizedPlacement(results: ExpandedScopedSelector[]): boolean {
+  return results.some(
+    (result) =>
+      result.placementKind === "normalized" || selectorStartsWithDeepBoundary(result.selector),
+  );
+}
+
+function selectorStartsWithDeepBoundary(selector: Selector): boolean {
+  return !!selector[0] && isDeepMarker(selector[0]);
 }

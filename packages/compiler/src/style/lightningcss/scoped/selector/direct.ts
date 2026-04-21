@@ -1,16 +1,16 @@
 import type { Selector, SelectorComponent } from "lightningcss";
-import { cloneAttribute, isDeepMarker, isDescendantCombinator } from "./context";
+import { cloneAttribute, isDeepMarker, isDescendantCombinator } from "../context";
 import type {
   ScopeContainerSelector,
   ScopedSelectorHelpers,
   SelectorContainerSelector,
-} from "./types";
+} from "../types";
 
 export function rewriteDirectScopedSelector(
   selector: Selector,
   helpers: ScopedSelectorHelpers,
 ): Selector {
-  stripLeadingUniversalInPlace(selector);
+  stripLeadingUniversal(selector);
 
   const anchorIndex = findInjectionAnchor(selector);
   if (anchorIndex !== -1) {
@@ -137,21 +137,18 @@ export function findInjectionAnchor(selector: Selector): number {
 }
 
 export function stripLeadingUniversal(selector: Selector): Selector {
-  stripLeadingUniversalInPlace(selector);
-  return selector;
-}
-
-function stripLeadingUniversalInPlace(selector: Selector): void {
   if (!selector[0] || selector[0].type !== "universal") {
-    return;
+    return selector;
   }
 
   if (selector[1] && selector[1].type === "combinator" && !isDescendantCombinator(selector[1])) {
-    return;
+    return selector;
   }
 
   selector.shift();
   if (isDescendantCombinator(selector[0])) {
     selector.shift();
   }
+
+  return selector;
 }
