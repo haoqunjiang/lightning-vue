@@ -4,6 +4,7 @@ import { canUseDirectScopeRewrite, expandScopeCarriers } from "./selector/expans
 import { appendPlacedScopeAttributes, cleanupScopedSelectorMarkers } from "./selector/placement";
 import type {
   ExpandedScopedSelector,
+  PlacedScopedSelector,
   ScopeInjectMode,
   ScopedSelectorHelpers,
   ScopedStyleTransformContext,
@@ -65,9 +66,9 @@ function appendExpandedScopedSelectors(
   target: Selector[],
 ): void {
   const expanded = expandScopedSelectorCarriers(selector, helpers);
-  const scoped: ExpandedScopedSelector[] = [];
-  appendPlacedScopeAttributesOnExpandedSelectors(expanded, injectMode, helpers, scoped);
-  appendCleanedScopedSelectorResults(scoped, target);
+  const placed: PlacedScopedSelector[] = [];
+  appendPlacedScopeAttributesOnExpandedSelectors(expanded, injectMode, helpers, placed);
+  appendCleanedScopedSelectorResults(placed, target);
 }
 
 function expandScopedSelectorCarriers(
@@ -85,7 +86,7 @@ function appendPlacedScopeAttributesOnExpandedSelectors(
   expanded: ExpandedScopedSelector[],
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
-  target: ExpandedScopedSelector[],
+  target: PlacedScopedSelector[],
 ): void {
   // Phase 2: interpret no-inject markers and place component or slot scope
   // attributes on the expanded selector states.
@@ -95,7 +96,7 @@ function appendPlacedScopeAttributesOnExpandedSelectors(
 }
 
 function appendCleanedScopedSelectorResults(
-  rewritten: ExpandedScopedSelector[],
+  rewritten: PlacedScopedSelector[],
   target: Selector[],
 ): void {
   // Phase 3: remove internal deep/no-inject markers once scope placement is

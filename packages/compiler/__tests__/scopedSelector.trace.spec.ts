@@ -3,7 +3,7 @@ import {
   formatScopedSelectorTrace,
   scopedSelectorTraceCases,
   traceScopedSelector,
-} from "./scopedSelectorHarness";
+} from "../src/debug/scopedSelector";
 
 /**
  * These snapshots document the conceptual scoped-selector phases for a small

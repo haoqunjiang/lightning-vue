@@ -1,22 +1,19 @@
 import type { RawSourceMap } from "@vue/compiler-core";
 import { type CssBlockNode, parseCssBlockTree } from "@lightning-vue/utils";
-import { extend } from "@vue/shared";
 import MagicString from "magic-string";
 import merge from "merge-source-map";
 import { warnOnce } from "../../../warn";
+import { hoistNestedAtRuleBlock, isDeclarationOnlyAtRuleSubtree } from "./atRules";
 import {
-  getPropagatedDeclarationWrapper,
-  hoistNestedAtRuleBlock,
-  isDeclarationOnlyAtRuleSubtree,
-} from "./atRules";
-import { preludeIsPureGlobalCarrier } from "../scopeCarriers";
-import type { NestedScopeContext } from "./deepContext";
-import { analyzeSelectorNestingContext } from "./deepContext";
-import {
-  createNoInjectAmpPrelude,
-  wrapPreludeInNoInjectCarrier,
-  wrapTopLevelTextSegments,
-} from "./text";
+  createAtRuleNormalizationInstructions,
+  createInitialNestedNormalizationContext,
+  createStyleRuleNormalizationInstructions,
+  type AtRuleNormalizationInstructions,
+  type BlockDecorationInstructions,
+  type NestedNormalizationContext,
+  type StyleRuleNormalizationInstructions,
+} from "./instructions";
+import { wrapPreludeInNoInjectCarrier, wrapTopLevelTextSegments } from "./text";
 
 export interface NormalizeNestedStyleBlocksResult {
   code: string;
@@ -30,44 +27,15 @@ interface ApplyBlockDecorationResult {
   introducedScopedSelectorSpecials: boolean;
 }
 
-interface NormalizeBlockState {
-  inheritedContext: NestedScopeContext;
-  atRuleDeclarationWrapper: string | null;
-}
-
-interface StyleRuleBehavior {
-  declarationWrapperPrelude: string | null;
-  hasMixedBranches: boolean;
-  inheritedContextForChildren: NestedScopeContext;
-  shouldDisableCurrentRuleInjection: boolean;
-}
-
-interface BlockDecorationPlan {
-  declarationWrapperPrelude: string | null;
-  disableCurrentRuleInjection: boolean;
-}
-
-interface ChildNormalizationPlan {
-  atRuleState: NormalizeBlockState;
-  hoistAtRulesToParentEnd?: number;
-  styleState: NormalizeBlockState;
-}
-
-interface StyleRuleNormalizationPlan extends BlockDecorationPlan, ChildNormalizationPlan {
-  warningMessage: string | null;
-}
-
-interface AtRuleNormalizationPlan extends BlockDecorationPlan, ChildNormalizationPlan {}
-
 export function normalizeNestedStyleBlocks(
   source: string,
   filename: string,
   map?: RawSourceMap,
   sourceMap: boolean = !!map,
 ): NormalizeNestedStyleBlocksResult {
-  // Normalize nested style blocks before selector scoping so source-level
-  // scoping sees explicit `& { ... }` declaration blocks instead of mixed
-  // declaration/rule bodies.
+  // Apply the block-local instructions from `instructions.ts` before selector
+  // scoping so the later scoped rewrite sees explicit `& { ... }`
+  // declaration blocks instead of mixed declaration/rule bodies.
   const s = new MagicString(source);
   let normalized = false;
   let introducedScopedSelectorSpecials = false;
@@ -78,7 +46,7 @@ export function normalizeNestedStyleBlocks(
   };
 
   for (const block of parseCssBlockTree(source)) {
-    noteResult(normalizeNestedBlock(block, s, source, initialNormalizeState()));
+    noteResult(normalizeNestedBlock(block, s, source, createInitialNestedNormalizationContext()));
   }
 
   if (!normalized) {
@@ -115,24 +83,27 @@ export function normalizeNestedStyleBlocks(
   };
 }
 
-function initialNormalizeState(): NormalizeBlockState {
-  return {
-    inheritedContext: "none",
-    atRuleDeclarationWrapper: null,
-  };
-}
-
 function normalizeNestedBlock(
   block: CssBlockNode,
   s: MagicString,
   source: string,
-  state: NormalizeBlockState,
+  context: NestedNormalizationContext,
 ): ApplyBlockDecorationResult {
   switch (block.blockKind) {
     case "style":
-      return normalizeStyleRuleBlock(block, s, source, state);
+      return applyStyleRuleNormalizationInstructions(
+        block,
+        s,
+        source,
+        createStyleRuleNormalizationInstructions(block, context),
+      );
     case "at-rule":
-      return normalizeAtRuleBlock(block, s, source, state);
+      return applyAtRuleNormalizationInstructions(
+        block,
+        s,
+        source,
+        createAtRuleNormalizationInstructions(block, context),
+      );
     default:
       return {
         changed: false,
@@ -141,103 +112,25 @@ function normalizeNestedBlock(
   }
 }
 
-function normalizeStyleRuleBlock(
-  block: CssBlockNode,
-  s: MagicString,
-  source: string,
-  state: NormalizeBlockState,
-): ApplyBlockDecorationResult {
-  const plan = planStyleRuleNormalization(block, state);
-  return applyStyleRuleNormalizationPlan(block, s, source, plan);
-}
-
-function planStyleRuleNormalization(
-  block: CssBlockNode,
-  state: NormalizeBlockState,
-): StyleRuleNormalizationPlan {
-  const ownContextAnalysis = analyzeSelectorNestingContext(block.normalizedPrelude);
-  const ownContext = ownContextAnalysis.context;
-  const inheritsContext = state.inheritedContext !== "none";
-  const hasDirectNestedStyleRules = block.children.some((child) => child.blockKind === "style");
-  const shouldWrapDeclarations = hasDirectNestedStyleRules && ownContext === "none";
-  const declarationWrapperPrelude = shouldWrapDeclarations
-    ? shouldUseNoInjectDeclarationWrapper(block.normalizedPrelude, inheritsContext)
-      ? createNoInjectAmpPrelude()
-      : "&"
-    : null;
-
-  const behavior: StyleRuleBehavior = {
-    declarationWrapperPrelude,
-    hasMixedBranches: hasDirectNestedStyleRules && ownContextAnalysis.hasMixedBranches,
-    inheritedContextForChildren: inheritsContext ? state.inheritedContext : ownContext,
-    shouldDisableCurrentRuleInjection: inheritsContext || shouldWrapDeclarations,
-  };
-
-  return extend(
-    {
-      warningMessage: behavior.hasMixedBranches
-        ? "Mixed selector branches that combine Vue deep/slotted carriers with ordinary local branches under nested rules are handled conservatively. Descendants stay locally scoped; split the selector list into separate rules for precise behavior."
-        : null,
-    },
-    createBlockDecorationPlan(behavior),
-    createChildNormalizationPlan(
-      behavior.inheritedContextForChildren,
-      behavior.declarationWrapperPrelude,
-      block.end,
-    ),
-  );
-}
-
-function shouldUseNoInjectDeclarationWrapper(prelude: string, inheritsContext: boolean): boolean {
-  return inheritsContext || preludeIsPureGlobalCarrier(prelude);
-}
-
-function normalizeAtRuleBlock(
-  block: CssBlockNode,
-  s: MagicString,
-  source: string,
-  state: NormalizeBlockState,
-): ApplyBlockDecorationResult {
-  const plan = planAtRuleNormalization(block, state);
-  return applyAtRuleNormalizationPlan(block, s, source, plan);
-}
-
-function planAtRuleNormalization(
-  block: CssBlockNode,
-  state: NormalizeBlockState,
-): AtRuleNormalizationPlan {
-  const propagatedDeclarationWrapper = getPropagatedDeclarationWrapper(
-    block.normalizedPrelude,
-    state.atRuleDeclarationWrapper,
-  );
-
-  return extend(
-    {
-      declarationWrapperPrelude: propagatedDeclarationWrapper,
-      disableCurrentRuleInjection: false,
-    },
-    createChildNormalizationPlan(state.inheritedContext, propagatedDeclarationWrapper),
-  );
-}
-
 function normalizeChildBlocks(
   block: CssBlockNode,
   s: MagicString,
   source: string,
-  styleState: NormalizeBlockState,
-  atRuleState: NormalizeBlockState,
-  hoistAtRulesToParentEnd?: number,
+  styleContext: NestedNormalizationContext,
+  atRuleContext: NestedNormalizationContext,
+  hoistDeclarationOnlyAtRulesToParentEnd?: number,
 ): ApplyBlockDecorationResult {
   let changed = false;
   let introducedScopedSelectorSpecials = false;
 
   for (const child of block.children) {
     if (
-      hoistAtRulesToParentEnd != null &&
+      hoistDeclarationOnlyAtRulesToParentEnd != null &&
       child.blockKind === "at-rule" &&
       isDeclarationOnlyAtRuleSubtree(child, source)
     ) {
-      changed = hoistNestedAtRuleBlock(child, hoistAtRulesToParentEnd, source, s) || changed;
+      changed =
+        hoistNestedAtRuleBlock(child, hoistDeclarationOnlyAtRulesToParentEnd, source, s) || changed;
       continue;
     }
 
@@ -245,7 +138,7 @@ function normalizeChildBlocks(
       child,
       s,
       source,
-      child.blockKind === "style" ? styleState : atRuleState,
+      child.blockKind === "style" ? styleContext : atRuleContext,
     );
     changed ||= childResult.changed;
     introducedScopedSelectorSpecials ||= childResult.introducedScopedSelectorSpecials;
@@ -257,52 +150,24 @@ function normalizeChildBlocks(
   };
 }
 
-function createBlockDecorationPlan(behavior: StyleRuleBehavior): BlockDecorationPlan {
-  return {
-    declarationWrapperPrelude: behavior.declarationWrapperPrelude,
-    disableCurrentRuleInjection: behavior.shouldDisableCurrentRuleInjection,
-  };
-}
-
-function createChildNormalizationPlan(
-  inheritedContext: NestedScopeContext,
-  declarationWrapperPrelude: string | null,
-  hoistAtRulesToParentEnd?: number,
-): ChildNormalizationPlan {
-  return {
-    atRuleState: {
-      // Conditional wrappers like `@media` should not change whether the
-      // nested subtree is still in deep/slot context. They only guard when the
-      // nested selector applies.
-      inheritedContext,
-      atRuleDeclarationWrapper: declarationWrapperPrelude,
-    },
-    hoistAtRulesToParentEnd,
-    styleState: {
-      inheritedContext,
-      atRuleDeclarationWrapper: null,
-    },
-  };
-}
-
-function applyStyleRuleNormalizationPlan(
+function applyStyleRuleNormalizationInstructions(
   block: CssBlockNode,
   s: MagicString,
   source: string,
-  plan: StyleRuleNormalizationPlan,
+  instructions: StyleRuleNormalizationInstructions,
 ): ApplyBlockDecorationResult {
-  if (plan.warningMessage) {
-    warnOnce(plan.warningMessage);
+  if (instructions.warningMessage) {
+    warnOnce(instructions.warningMessage);
   }
 
-  const decoration = applyBlockDecorationPlan(block, s, source, plan);
+  const decoration = applyBlockDecorationInstructions(block, s, source, instructions);
   const children = normalizeChildBlocks(
     block,
     s,
     source,
-    plan.styleState,
-    plan.atRuleState,
-    plan.hoistAtRulesToParentEnd,
+    instructions.childStyleContext,
+    instructions.childAtRuleContext,
+    instructions.hoistDeclarationOnlyAtRulesToParentEnd,
   );
 
   return {
@@ -312,14 +177,20 @@ function applyStyleRuleNormalizationPlan(
   };
 }
 
-function applyAtRuleNormalizationPlan(
+function applyAtRuleNormalizationInstructions(
   block: CssBlockNode,
   s: MagicString,
   source: string,
-  plan: AtRuleNormalizationPlan,
+  instructions: AtRuleNormalizationInstructions,
 ): ApplyBlockDecorationResult {
-  const decoration = applyBlockDecorationPlan(block, s, source, plan);
-  const children = normalizeChildBlocks(block, s, source, plan.styleState, plan.atRuleState);
+  const decoration = applyBlockDecorationInstructions(block, s, source, instructions);
+  const children = normalizeChildBlocks(
+    block,
+    s,
+    source,
+    instructions.childStyleContext,
+    instructions.childAtRuleContext,
+  );
 
   return {
     changed: decoration.changed || children.changed,
@@ -328,11 +199,11 @@ function applyAtRuleNormalizationPlan(
   };
 }
 
-function applyBlockDecorationPlan(
+function applyBlockDecorationInstructions(
   block: CssBlockNode,
   s: MagicString,
   source: string,
-  plan: BlockDecorationPlan,
+  instructions: BlockDecorationInstructions,
 ): ApplyBlockDecorationResult {
   let changed = false;
   let introducedScopedSelectorSpecials = false;
@@ -340,22 +211,22 @@ function applyBlockDecorationPlan(
   // Context-only parent rules should not receive the normal scope attribute
   // themselves. They only provide nesting context for the explicit `& { ... }`
   // wrapper blocks that we synthesize below.
-  if (plan.disableCurrentRuleInjection) {
+  if (instructions.disableCurrentRuleInjection) {
     const wrappedPrelude = wrapPreludeInNoInjectCarrier(block, s);
     changed ||= wrappedPrelude;
     introducedScopedSelectorSpecials ||= wrappedPrelude;
   }
 
-  if (plan.declarationWrapperPrelude) {
+  if (instructions.declarationWrapperPrelude) {
     const wrappedTopLevelText = wrapTopLevelTextSegments(
       block,
       s,
       source,
-      plan.declarationWrapperPrelude,
+      instructions.declarationWrapperPrelude,
     );
     changed ||= wrappedTopLevelText;
     introducedScopedSelectorSpecials ||=
-      wrappedTopLevelText && plan.declarationWrapperPrelude.includes(":global(");
+      wrappedTopLevelText && instructions.declarationWrapperPrelude.includes(":global(");
   }
 
   return {

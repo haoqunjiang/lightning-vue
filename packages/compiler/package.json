@@ -38,6 +38,26 @@
       "import": "./dist/browser.mjs",
       "require": "./dist/browser.cjs"
     },
+    "./debug": {
+      "types": "./dist/debug.d.mts",
+      "import": "./dist/debug.mjs",
+      "require": "./dist/debug.cjs"
+    },
+    "./debug/nesting": {
+      "types": "./dist/debug/nesting.d.mts",
+      "import": "./dist/debug/nesting.mjs",
+      "require": "./dist/debug/nesting.cjs"
+    },
+    "./debug/scopedSelector": {
+      "types": "./dist/debug/scopedSelector.d.mts",
+      "import": "./dist/debug/scopedSelector.mjs",
+      "require": "./dist/debug/scopedSelector.cjs"
+    },
+    "./debug/styleCompile": {
+      "types": "./dist/debug/styleCompile.d.mts",
+      "import": "./dist/debug/styleCompile.mjs",
+      "require": "./dist/debug/styleCompile.cjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {

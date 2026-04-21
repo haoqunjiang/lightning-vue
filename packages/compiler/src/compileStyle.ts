@@ -4,29 +4,25 @@ import type {
   SFCStyleCompileResults,
 } from "@vue/compiler-sfc";
 import type { RawSourceMap } from "@vue/compiler-core";
-import type { CSSModuleExports } from "lightningcss";
-import { camelize, extend } from "@vue/shared";
+import { extend } from "@vue/shared";
 import { createCompilerRequire } from "./nodeRequire";
 import {
   type StylePreprocessor,
   type StylePreprocessorResults,
   processors,
 } from "./style/preprocessors";
-import { findLegacyVueScopedSyntaxError } from "./style/lightningcss/scoped/legacy";
 import {
   type CSSModulesOptions,
   type StyleCompileContext,
   type StyleCompileState,
-  createLightningCssTransformOptions,
   createStyleCompileContext,
+  createStyleCompileSession,
   createStyleCompileState,
-  computeScopedSource,
-  decodeCode,
   finalizeStyleCompileFailure,
-  normalizeNestedStylesInState,
-  rewriteAnimationDeclarationsIfNeeded,
-  rewriteCssVarsInState,
-} from "./stylePipeline";
+  finalizeStyleCompileSuccess,
+  prepareStyleCompileSessionForTransform,
+  transformPreparedStyleCompileSession,
+} from "./styleCompile";
 
 export type {
   SFCAsyncStyleCompileOptions,
@@ -79,34 +75,23 @@ function compileStyleWithLightningCssImpl(
   }
 
   const context = createStyleCompileContext(options);
-  const state = createPreparedStyleCompileState(options, context);
-  const legacyScopedSyntaxError = context.scoped && findLegacyVueScopedSyntaxError(state.source);
-  if (legacyScopedSyntaxError) {
-    state.errors.push(legacyScopedSyntaxError);
-    return finalizeStyleCompileFailure(state);
+  const state = createInitialStyleCompileState(options, context);
+  const session = createStyleCompileSession(context, state);
+  if (!prepareStyleCompileSessionForTransform(session)) {
+    return finalizeStyleCompileFailure(session);
   }
-
-  rewriteCssVarsInState(state, context);
-  normalizeNestedStylesInState(state, context);
 
   try {
     const lightningcss = loadLightningCss(context.filename);
-    const sourceScoping = computeScopedSource(state, context);
-    const transformOptions = createLightningCssTransformOptions(
-      lightningcss,
-      state,
-      context,
-      sourceScoping,
-    );
-    const result = lightningcss.transform(transformOptions);
-    return finalizeStyleCompileSuccess(result, state, context);
+    const result = transformPreparedStyleCompileSession(lightningcss, session);
+    return finalizeStyleCompileSuccess(result, session);
   } catch (e: any) {
     state.errors.push(e);
-    return finalizeStyleCompileFailure(state);
+    return finalizeStyleCompileFailure(session);
   }
 }
 
-function createPreparedStyleCompileState(
+function createInitialStyleCompileState(
   options: SFCStyleCompileOptions | SFCAsyncStyleCompileOptions,
   context: StyleCompileContext,
 ): StyleCompileState {
@@ -127,30 +112,6 @@ function createPreparedStyleCompileState(
       errors: preProcessedSource ? [...preProcessedSource.errors] : [],
     },
   );
-}
-
-function finalizeStyleCompileSuccess(
-  result: any,
-  state: StyleCompileState,
-  context: StyleCompileContext,
-): SFCStyleCompileResults {
-  const postTransform = rewriteAnimationDeclarationsIfNeeded(
-    decodeCode(result.code),
-    result.map ? JSON.parse(decodeCode(result.map)) : undefined,
-    state.analysis,
-    context,
-  );
-
-  return {
-    code: postTransform.code,
-    map: postTransform.map,
-    rawResult: undefined,
-    errors: state.errors,
-    modules: context.modules
-      ? normalizeLightningCssModules(result.exports, context.modulesOptions)
-      : undefined,
-    dependencies: state.dependencies,
-  };
 }
 
 function assertSupportedLightningCssStyleOptions(
@@ -236,108 +197,6 @@ function hasUnsupportedLightningCssModulePattern(pattern: string): boolean {
         placeholder !== "[name]" && placeholder !== "[local]" && placeholder !== "[hash]",
     )
   );
-}
-
-function normalizeLightningCssModules(
-  exports: CSSModuleExports | undefined,
-  options: CSSModulesOptions,
-): Record<string, string> | undefined {
-  if (!exports) {
-    return undefined;
-  }
-
-  const localsConvention = options.localsConvention;
-  const modules: Record<string, string> = {};
-  const exportsByCompiledName = new Map(
-    Object.values(exports).map((value) => [value.name, value] as const),
-  );
-
-  for (const [originalName, value] of Object.entries(exports)) {
-    appendCssModuleExport(
-      modules,
-      originalName,
-      collectCssModuleExportNames(value, exportsByCompiledName).join(" "),
-      localsConvention,
-    );
-  }
-
-  return modules;
-}
-
-function appendCssModuleExport(
-  modules: Record<string, string>,
-  originalName: string,
-  localName: string,
-  localsConvention: CSSModulesOptions["localsConvention"],
-): void {
-  switch (localsConvention) {
-    case "camelCase":
-      modules[originalName] = localName;
-      modules[camelize(originalName)] = localName;
-      return;
-    case "camelCaseOnly":
-      modules[camelize(originalName)] = localName;
-      return;
-    case "dashes":
-      modules[originalName] = localName;
-      if (originalName.includes("-")) {
-        modules[camelize(originalName)] = localName;
-      }
-      return;
-    case "dashesOnly":
-      if (originalName.includes("-")) {
-        modules[camelize(originalName)] = localName;
-      } else {
-        modules[originalName] = localName;
-      }
-      return;
-    default:
-      modules[originalName] = localName;
-  }
-}
-
-function collectCssModuleExportNames(
-  value: CSSModuleExports[string],
-  exportsByCompiledName: ReadonlyMap<string, CSSModuleExports[string]>,
-  visited = new Set<string>(),
-): string[] {
-  if (visited.has(value.name)) {
-    return [];
-  }
-
-  visited.add(value.name);
-
-  const names = [value.name];
-
-  for (const reference of value.composes) {
-    if (reference.type === "global") {
-      if (!names.includes(reference.name)) {
-        names.push(reference.name);
-      }
-      continue;
-    }
-
-    if (reference.type === "dependency") {
-      throw createUnsupportedStyleOptionError(
-        "`modules` with `composes: ... from ...` dependency references",
-      );
-    }
-
-    if (reference.type === "local") {
-      const composedExport = exportsByCompiledName.get(reference.name);
-      const composedNames = composedExport
-        ? collectCssModuleExportNames(composedExport, exportsByCompiledName, visited)
-        : [reference.name];
-
-      for (const composedName of composedNames) {
-        if (!names.includes(composedName)) {
-          names.push(composedName);
-        }
-      }
-    }
-  }
-
-  return names;
 }
 
 function preprocess(

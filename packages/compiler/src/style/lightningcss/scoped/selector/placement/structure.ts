@@ -3,8 +3,7 @@ import { extend } from "@vue/shared";
 import { cloneAttribute, cloneCombinator, isDeepMarker } from "../../context";
 import { isScopeContainer, isSelectorContainer } from "../direct";
 import type {
-  SelectorPlacementClassification,
-  ScopePlacementKind,
+  SelectorPlacementPlan,
   ScopeContainerSelector,
   ScopedSelectorHelpers,
   SelectorContainerSelector,
@@ -95,15 +94,15 @@ function normalizeNestedBranches(
   helpers: ScopedSelectorHelpers,
 ): Selector[] {
   return selectors.flatMap((nestedSelector) =>
-    classifySelectorForPlacement(nestedSelector).placementKind === "normalized"
+    classifySelectorForPlacement(nestedSelector) === "normalize-and-rewrite"
       ? normalizeSelectorForPlacement(nestedSelector, helpers)
       : [nestedSelector],
   );
 }
 
-export function classifySelectorForPlacement(selector: Selector): SelectorPlacementClassification {
+export function classifySelectorForPlacement(selector: Selector): SelectorPlacementPlan {
   let needsNestedScopeRewrite = false;
-  let placementKind: ScopePlacementKind = "direct";
+  let needsNormalization = false;
 
   for (const component of selector) {
     if (!isScopeContainer(component)) {
@@ -114,23 +113,24 @@ export function classifySelectorForPlacement(selector: Selector): SelectorPlacem
     for (const nestedSelector of component.selectors) {
       const nestedClassification = classifySelectorForPlacement(nestedSelector);
       if (
-        nestedClassification.placementKind === "normalized" ||
+        nestedClassification === "normalize-and-rewrite" ||
         startsWithDeepBoundary(nestedSelector)
       ) {
-        placementKind = "normalized";
+        needsNormalization = true;
         break;
       }
     }
 
-    if (placementKind === "normalized") {
+    if (needsNormalization) {
       break;
     }
   }
 
-  return {
-    needsNestedScopeRewrite,
-    placementKind,
-  };
+  if (!needsNestedScopeRewrite) {
+    return "direct";
+  }
+
+  return needsNormalization ? "normalize-and-rewrite" : "rewrite-nested";
 }
 
 function buildDescendantScopeContainerSelector(

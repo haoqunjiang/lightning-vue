@@ -1,0 +1,150 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`nesting normalization trace > 'conditional wrappers propagate declar…' 1`] = `
+"source: .card {
+  color: red;
+  @media (min-width: 600px) {
+    color: blue;
+    .title { color: green; }
+  }
+}
+
+instructions:
+  - style ".card"
+    context.inherited=none
+    context.wrapper=none
+    instructions.kind=style
+    instructions.wrapper=none
+    instructions.disableCurrentRuleInjection=false
+    instructions.hoistDeclarationOnlyAtRules=true
+    instructions.childStyleContext=none|none
+    instructions.childAtRuleContext=none|none
+    instructions.warning=none
+    - at-rule "@media (min-width: 600px)"
+      context.inherited=none
+      context.wrapper=none
+      instructions.kind=at-rule
+      instructions.wrapper=none
+      instructions.disableCurrentRuleInjection=false
+      instructions.hoistDeclarationOnlyAtRules=false
+      instructions.childStyleContext=none|none
+      instructions.childAtRuleContext=none|none
+      instructions.warning=none
+      - style ".title"
+        context.inherited=none
+        context.wrapper=none
+        instructions.kind=style
+        instructions.wrapper=none
+        instructions.disableCurrentRuleInjection=false
+        instructions.hoistDeclarationOnlyAtRules=true
+        instructions.childStyleContext=none|none
+        instructions.childAtRuleContext=none|none
+        instructions.warning=none
+
+result:
+  - normalized=false
+  - introducedScopedSelectorSpecials=false
+  - code=".card {\\n  color: red;\\n  @media (min-width: 600px) {\\n    color: blue;\\n    .title { color: green; }\\n  }\\n}""
+`;
+
+exports[`nesting normalization trace > 'local declarations wrapped before nes…' 1`] = `
+"source: .card {
+  color: red;
+  .title { color: blue; }
+}
+
+instructions:
+  - style ".card"
+    context.inherited=none
+    context.wrapper=none
+    instructions.kind=style
+    instructions.wrapper=&
+    instructions.disableCurrentRuleInjection=true
+    instructions.hoistDeclarationOnlyAtRules=true
+    instructions.childStyleContext=none|none
+    instructions.childAtRuleContext=none|&
+    instructions.warning=none
+    - style ".title"
+      context.inherited=none
+      context.wrapper=none
+      instructions.kind=style
+      instructions.wrapper=none
+      instructions.disableCurrentRuleInjection=false
+      instructions.hoistDeclarationOnlyAtRules=true
+      instructions.childStyleContext=none|none
+      instructions.childAtRuleContext=none|none
+      instructions.warning=none
+
+result:
+  - normalized=true
+  - introducedScopedSelectorSpecials=true
+  - code=":global(.card) {\\n  & {color: red;}\\n  .title { color: blue; }\\n}""
+`;
+
+exports[`nesting normalization trace > 'mixed local and deep branches warn co…' 1`] = `
+"source: :is(:deep(.shell), .pane) {
+  color: red;
+  .title { color: blue; }
+}
+
+instructions:
+  - style ":is(:deep(.shell), .pane)"
+    context.inherited=none
+    context.wrapper=none
+    instructions.kind=style
+    instructions.wrapper=&
+    instructions.disableCurrentRuleInjection=true
+    instructions.hoistDeclarationOnlyAtRules=true
+    instructions.childStyleContext=none|none
+    instructions.childAtRuleContext=none|&
+    instructions.warning=Mixed selector branches that combine Vue deep/slotted carriers with ordinary local branches under nested rules are handled conservatively. Descendants stay locally scoped; split the selector list into separate rules for precise behavior.
+    - style ".title"
+      context.inherited=none
+      context.wrapper=none
+      instructions.kind=style
+      instructions.wrapper=none
+      instructions.disableCurrentRuleInjection=false
+      instructions.hoistDeclarationOnlyAtRules=true
+      instructions.childStyleContext=none|none
+      instructions.childAtRuleContext=none|none
+      instructions.warning=none
+
+result:
+  - normalized=true
+  - introducedScopedSelectorSpecials=true
+  - code=":global(:is(:deep(.shell), .pane)) {\\n  & {color: red;}\\n  .title { color: blue; }\\n}""
+`;
+
+exports[`nesting normalization trace > 'outer deep context keeps the parent r…' 1`] = `
+"source: :deep(.shell) {
+  color: red;
+  .title { color: blue; }
+}
+
+instructions:
+  - style ":deep(.shell)"
+    context.inherited=none
+    context.wrapper=none
+    instructions.kind=style
+    instructions.wrapper=none
+    instructions.disableCurrentRuleInjection=false
+    instructions.hoistDeclarationOnlyAtRules=true
+    instructions.childStyleContext=deep|none
+    instructions.childAtRuleContext=deep|none
+    instructions.warning=none
+    - style ".title"
+      context.inherited=deep
+      context.wrapper=none
+      instructions.kind=style
+      instructions.wrapper=none
+      instructions.disableCurrentRuleInjection=true
+      instructions.hoistDeclarationOnlyAtRules=true
+      instructions.childStyleContext=deep|none
+      instructions.childAtRuleContext=deep|none
+      instructions.warning=none
+
+result:
+  - normalized=true
+  - introducedScopedSelectorSpecials=true
+  - code=":deep(.shell) {\\n  color: red;\\n  :global(.title) { color: blue; }\\n}""
+`;

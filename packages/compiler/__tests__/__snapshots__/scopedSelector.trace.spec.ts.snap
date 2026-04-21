@@ -6,14 +6,14 @@ injectMode: normal
 path: expanded
 
 expansion:
-  1. placement=normalized deep=true nestedRewrite=true .a:is([__VUE_SCOPE_DEEP__] .foo)
+  1. placement=normalize-and-rewrite deep=true nestedRewrite=true .a:is([__VUE_SCOPE_DEEP__] .foo)
 
 placement input:
-  1. placement=normalized effectiveMode=normal
+  1. placement=normalize-and-rewrite effectiveMode=normal
      - .a[__VUE_SCOPE_DEEP__] .foo
 
 placement:
-  1. placement=direct deep=true nestedRewrite=false .a[data-v-trace][__VUE_SCOPE_DEEP__] .foo
+  1. deep=true .a[data-v-trace][__VUE_SCOPE_DEEP__] .foo
 
 cleanup:
   - .a[data-v-trace] .foo
@@ -40,14 +40,14 @@ injectMode: normal
 path: expanded
 
 expansion:
-  1. placement=direct deep=true nestedRewrite=true .a:is(.b [__VUE_SCOPE_DEEP__].c)
+  1. placement=rewrite-nested deep=true nestedRewrite=true .a:is(.b [__VUE_SCOPE_DEEP__].c)
 
 placement input:
-  1. placement=direct effectiveMode=normal
+  1. placement=rewrite-nested effectiveMode=normal
      - .a:is(.b [__VUE_SCOPE_DEEP__].c)
 
 placement:
-  1. placement=direct deep=true nestedRewrite=false .a[data-v-trace]:is(.b[data-v-trace] [__VUE_SCOPE_DEEP__].c)
+  1. deep=true .a[data-v-trace]:is(.b[data-v-trace] [__VUE_SCOPE_DEEP__].c)
 
 cleanup:
   - .a[data-v-trace]:is(.b[data-v-trace] .c)
@@ -62,16 +62,16 @@ injectMode: normal
 path: expanded
 
 expansion:
-  1. placement=normalized deep=true nestedRewrite=true .a:is(:where([__VUE_SCOPE_DEEP__] .b), .c)
+  1. placement=normalize-and-rewrite deep=true nestedRewrite=true .a:is(:where([__VUE_SCOPE_DEEP__] .b), .c)
 
 placement input:
-  1. placement=normalized effectiveMode=normal
+  1. placement=normalize-and-rewrite effectiveMode=normal
      - .a:is(.c)
      - .a[__VUE_SCOPE_DEEP__] :where(.b)
 
 placement:
-  1. placement=direct deep=true nestedRewrite=false .a[data-v-trace]:is(.c)
-  2. placement=direct deep=true nestedRewrite=false .a[data-v-trace][__VUE_SCOPE_DEEP__] :where(.b)
+  1. deep=true .a[data-v-trace]:is(.c)
+  2. deep=true .a[data-v-trace][__VUE_SCOPE_DEEP__] :where(.b)
 
 cleanup:
   - .a[data-v-trace]:is(.c)
@@ -88,14 +88,14 @@ injectMode: normal
 path: expanded
 
 expansion:
-  1. placement=direct deep=true nestedRewrite=true .x[__VUE_SCOPE_DEEP__] .a:is([__VUE_SCOPE_DEEP__] .b, .c)
+  1. placement=rewrite-nested deep=true nestedRewrite=true .x[__VUE_SCOPE_DEEP__] .a:is([__VUE_SCOPE_DEEP__] .b, .c)
 
 placement input:
-  1. placement=direct effectiveMode=normal
+  1. placement=rewrite-nested effectiveMode=normal
      - .x[__VUE_SCOPE_DEEP__] .a:is([__VUE_SCOPE_DEEP__] .b, .c)
 
 placement:
-  1. placement=direct deep=true nestedRewrite=false .x[data-v-trace][__VUE_SCOPE_DEEP__] .a:is([__VUE_SCOPE_DEEP__] .b, .c)
+  1. deep=true .x[data-v-trace][__VUE_SCOPE_DEEP__] .a:is([__VUE_SCOPE_DEEP__] .b, .c)
 
 cleanup:
   - .x[data-v-trace] .a:is(.b, .c)
@@ -117,7 +117,7 @@ placement input:
      - .a[data-v-trace-s]:is(.b)
 
 placement:
-  1. placement=direct deep=false nestedRewrite=false .a[data-v-trace-s]:is(.b)
+  1. deep=false .a[data-v-trace-s]:is(.b)
 
 cleanup:
   - .a[data-v-trace-s]:is(.b)

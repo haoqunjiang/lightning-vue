@@ -35,6 +35,17 @@ Everything else is re-exported from `@vue/compiler-sfc`.
 The main entrypoint is
 [src/compileStyle.ts](./src/compileStyle.ts).
 
+The browser-facing entrypoint is
+[src/browser.ts](./src/browser.ts). The Node and browser compilers keep their
+option validation, runtime loading, and preprocessing policy separate, but they
+share the same middle pipeline in
+[src/styleCompile/](./src/styleCompile/):
+
+- build a `StyleCompileSession`
+- prepare source-only rewrites
+- derive a `StyleTransformPlan` and run Lightning CSS
+- finalize the public `SFCStyleCompileResults`
+
 ## First Principles
 
 There are three constraints that drive the design:
@@ -91,6 +102,16 @@ silently falling back.
 
 If the style uses Sass, Less, or Stylus, preprocessing runs before any CSS
 analysis so the rest of the pipeline always sees plain CSS.
+
+`browser.ts` applies the same style-option philosophy, but with a narrower
+surface:
+
+- no preprocessors
+- no CSS modules
+- no PostCSS-specific plugin pipeline
+
+After that edge-specific validation, it rejoins the same shared style pipeline
+as the Node entrypoint.
 
 ### 2. Reject Legacy Vue Scoped Syntax
 
@@ -162,11 +183,19 @@ Why that odd shape?
 
 So the normalizer:
 
-- wraps top-level declarations into explicit `& { ... }` blocks
-- marks context-only parent selectors as “do not inject scope here”
-- propagates deep/slot context through nested conditional at-rules
-- hoists declaration-only nested at-rule subtrees that cannot stay inside a
-  style-rule body
+- analyzes the nesting context established by each selector in
+  [nesting/contextAnalysis.ts](./src/style/lightningcss/nesting/contextAnalysis.ts)
+- builds explicit block-local rewrite instructions in
+  [nesting/instructions.ts](./src/style/lightningcss/nesting/instructions.ts)
+- applies those instructions source-to-source in
+  [nesting/normalize.ts](./src/style/lightningcss/nesting/normalize.ts)
+
+Those plans cover four decisions:
+
+- whether declarations need an explicit `& { ... }` wrapper
+- whether the current rule becomes context-only
+- which context child style rules and child at-rules inherit
+- whether declaration-only nested at-rules must be hoisted out
 
 This stage is intentionally source-based because it benchmarks better than the
 AST-heavy alternative for carrier-heavy nested styles.
@@ -277,24 +306,43 @@ Expansion produces an explicit `ExpandedScopedSelector` state:
 
 - `selector`
 - `deep`
-- `placementKind`
-- `needsNestedScopeRewrite`
+- `placement`
 
 That state is the handoff between expansion and placement.
 
-It exists for a simple reason: placement should not have to rediscover the same
-facts from raw selector syntax on every pass.
+It exists so placement does not have to rediscover the same facts from raw
+selector syntax on every pass.
 
-Bare nested selectors still need one small classification step when placement
-recurses into selector containers. That classification is intentionally unified:
-one helper answers both of these questions at once:
+`placement` is one named plan value, not two unrelated flags:
 
-- does this selector need structural splitting before anchor selection?
-- does this selector contain nested scope containers that must be revisited
-  after outer placement?
+- `direct`
+  place scope immediately
+- `rewrite-nested`
+  place scope immediately, then revisit nested `:is(...)` / `:where(...)`
+- `normalize-and-rewrite`
+  split mixed same-element / descendant structure before placement, then do the
+  same nested rewrite pass
 
-Keeping that as one contract avoids asking separate helpers for separate facts
-about the same selector.
+One subtle rule is important here: an inner `normalize-and-rewrite` plan does
+not automatically escape through an outer `:deep(...)` boundary. Once a branch
+has already crossed into the unscoped side of an outer deep carrier, placement
+still needs nested cleanup, but it must not re-normalize the outer selector as
+if that inner branch were still local.
+
+When placement later recurses into a bare nested selector, it runs one small
+classifier to recover that same plan from syntax. Keeping that as one contract
+avoids asking separate helpers for separate facts about the same selector.
+
+Placement does **not** keep carrying that whole state afterward.
+
+Once a real scope attribute has been inserted, the remaining contract is just:
+
+- `selector`
+- `deep`
+
+That smaller post-placement result is what cleanup consumes. This keeps the
+phase boundary honest: cleanup should not depend on placement-time control
+fields that no longer matter.
 
 #### 2. Placement
 
@@ -345,15 +393,21 @@ Placement itself is split further:
 - [placement/nested.ts](./src/style/lightningcss/scoped/selector/placement/nested.ts)
   rewrites nested `:is(...)` / `:where(...)` branches after outer placement
 - [placement/index.ts](./src/style/lightningcss/scoped/selector/placement/index.ts)
-  coordinates placement itself
+  coordinates placement itself, with one entrypoint for expanded selector
+  states and one for bare nested selectors encountered during placement
+
+That split matters because the two callers are on different sides of the phase
+boundary:
+
+- expansion hands placement a full `ExpandedScopedSelector`
+- nested placement recursion hands it a bare `Selector`, which is first
+  classified and only then routed through the same placement machinery
 
 The two ideas to keep in mind are:
 
-- `placementKind` answers:
-  does this selector structure need to split before we choose an anchor?
-- selector placement classification answers:
-  what does placement need to know about a bare nested selector before it can
-  recurse into it?
+- selector placement plan answers:
+  can placement act directly, or must it normalize structure first, and will
+  nested containers need a second pass afterward?
 - nested scope context answers:
   are we still on the local side, or already after `:deep(...)`, inside
   `:slotted(...)`, or fully unscoped?
@@ -394,6 +448,30 @@ visitor-based selector rewriting inside Lightning CSS.
 
 That fallback exists for correctness, but the source path is the performance
 target.
+
+## Observability
+
+The codebase keeps the major style stages observable in tests instead of making
+them debugger-only concepts:
+
+- `styleCompile.trace.spec.ts`
+  traces the shared style-compile session, transform plan, and final result
+- `nestingNormalization.trace.spec.ts`
+  traces nested-block instructions and the final normalized source
+- `scopedSelector.trace.spec.ts`
+  traces selector expansion, placement, cleanup, and final scoped selectors
+
+These traces are intentionally narrower than the full implementation details.
+They exist to keep the phase boundaries and cross-phase state small enough to
+explain.
+
+For interactive debugging, the scoped-selector and nesting traces are also
+available from the compiler's debug surface:
+
+- `@lightning-vue/compiler/debug`
+
+The internal IR playground consumes that same debug surface rather than
+re-implementing the tracing logic.
 
 ## What Lightning CSS Is Responsible For
 
@@ -459,10 +537,23 @@ Top-level orchestration:
 
 - validate
 - preprocess
-- analyze
-- rewrite source as needed
-- run Lightning CSS
-- finalize result
+- create the shared style pipeline state
+- run the shared style pipeline
+
+### `src/styleCompile/`
+
+Shared style-compilation stages used by both the Node and browser entrypoints:
+
+- `context.ts`
+  compile context, initial mutable state, and session creation
+- `prepare.ts`
+  pre-transform source preparation
+- `transform.ts`
+  transform-plan derivation, source scoping, and Lightning CSS transform setup
+- `finalize.ts`
+  post-transform animation fixup and public result assembly
+- `modules.ts`
+  CSS modules result normalization
 
 ### `src/style/lightningcss/analysis.ts`
 
@@ -474,7 +565,14 @@ The syntax contract for modern Vue scope carriers.
 
 ### `src/style/lightningcss/nesting/`
 
-Source-based nested normalization and nested-context analysis.
+Source-based nested normalization:
+
+- `contextAnalysis.ts`
+  nested deep/slot/local context analysis
+- `instructions.ts`
+  block-local normalization instructions
+- `normalize.ts`
+  source rewrite that applies those plans
 
 ### `src/style/lightningcss/scoped/`
 

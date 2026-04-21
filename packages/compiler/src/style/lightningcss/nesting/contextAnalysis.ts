@@ -2,6 +2,10 @@ import type { Selector, SelectorComponent } from "lightningcss";
 import { parseSelectorListFromString } from "@lightning-vue/utils";
 import { isScopeCarrierSelector, scopeCarrierParserOptions } from "../scopeCarriers";
 
+// This module answers one question for nested source normalization:
+// when a nested selector becomes the parent boundary for later descendants,
+// does that boundary stay local, switch to deep context, switch to slot
+// context, or contain mixed branches that force conservative handling?
 export type NestedScopeContext = "deep" | "none" | "slotted";
 
 export interface NestedScopeAnalysis {
@@ -20,9 +24,11 @@ function createNestedScopeAnalysis(
 }
 
 /**
- * Returns whether this selector places descendant nested rules into Vue's deep
- * context, meaning later source normalization should stop treating the current
- * rule as a normal scoping boundary.
+ * Returns the nesting context established for later nested descendants.
+ *
+ * This is broader than “deep context”: it also tracks slot context and mixed
+ * branch lists like `:is(:deep(.x), .y)` that force normalization to keep the
+ * current rule in ordinary local mode.
  */
 export function analyzeSelectorNestingContext(prelude: string): NestedScopeAnalysis {
   try {

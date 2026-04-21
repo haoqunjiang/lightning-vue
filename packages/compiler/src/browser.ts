@@ -5,19 +5,16 @@ import type {
   SFCStyleCompileResults,
 } from "@vue/compiler-sfc";
 import type { RawSourceMap } from "@vue/compiler-core";
-import { findLegacyVueScopedSyntaxError } from "./style/lightningcss/scoped/legacy";
 import {
   type LightningCssRuntime,
-  createLightningCssTransformOptions,
   createStyleCompileContext,
+  createStyleCompileSession,
   createStyleCompileState,
-  computeScopedSource,
-  decodeCode,
   finalizeStyleCompileFailure,
-  normalizeNestedStylesInState,
-  rewriteAnimationDeclarationsIfNeeded,
-  rewriteCssVarsInState,
-} from "./stylePipeline";
+  finalizeStyleCompileSuccess,
+  prepareStyleCompileSessionForTransform,
+  transformPreparedStyleCompileSession,
+} from "./styleCompile";
 
 export type BrowserLightningCssLoader = () => LightningCssRuntime | Promise<LightningCssRuntime>;
 
@@ -51,27 +48,20 @@ async function compileStyleWithLightningCssInBrowser(
     (options.inMap || options.map) as RawSourceMap | undefined,
     context,
   );
-  const legacyScopedSyntaxError = context.scoped && findLegacyVueScopedSyntaxError(state.source);
-
-  if (legacyScopedSyntaxError) {
-    state.errors.push(legacyScopedSyntaxError);
-    return finalizeStyleCompileFailure(state);
+  const session = createStyleCompileSession(context, state);
+  if (!prepareStyleCompileSessionForTransform(session)) {
+    return finalizeStyleCompileFailure(session);
   }
-
-  rewriteCssVarsInState(state, context);
-  normalizeNestedStylesInState(state, context);
 
   try {
     const lightningcss = await loadLightningCss();
-    const sourceScoping = computeScopedSource(state, context);
-    const result = lightningcss.transform(
-      createLightningCssTransformOptions(lightningcss, state, context, sourceScoping),
+    return finalizeStyleCompileSuccess(
+      transformPreparedStyleCompileSession(lightningcss, session),
+      session,
     );
-
-    return finalizeBrowserStyleCompileSuccess(result, state, context);
   } catch (error) {
     state.errors.push(error as Error);
-    return finalizeStyleCompileFailure(state);
+    return finalizeStyleCompileFailure(session);
   }
 }
 
@@ -113,26 +103,5 @@ function createBrowserStyleCompileFailureResult(
     rawResult: undefined,
     errors: [error],
     dependencies: new Set(options.filename ? [options.filename] : []),
-  };
-}
-
-function finalizeBrowserStyleCompileSuccess(
-  result: any,
-  state: ReturnType<typeof createStyleCompileState>,
-  context: ReturnType<typeof createStyleCompileContext>,
-): SFCStyleCompileResults {
-  const postTransform = rewriteAnimationDeclarationsIfNeeded(
-    decodeCode(result.code),
-    result.map ? JSON.parse(decodeCode(result.map)) : undefined,
-    state.analysis,
-    context,
-  );
-
-  return {
-    code: postTransform.code,
-    map: postTransform.map,
-    rawResult: undefined,
-    errors: state.errors,
-    dependencies: state.dependencies,
   };
 }

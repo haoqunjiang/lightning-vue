@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { analyzeSelectorNestingContext } from "../src/style/lightningcss/nesting/deepContext";
+import { analyzeSelectorNestingContext } from "../src/style/lightningcss/nesting/contextAnalysis";
 
 describe("analyzeSelectorNestingContext", () => {
   test.each([

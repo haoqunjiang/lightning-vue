@@ -1,0 +1,171 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`'css modules transform plan' 1`] = `
+"source: .foo-bar { color: red; }
+
+context:
+  - filename=trace.css
+  - scoped=false
+  - modules=true
+  - sourceMap=false
+  - isProd=false
+
+initial:
+  - initial.source=".foo-bar { color: red; }"
+  - initial.analysis=nested:false specials:false animations:false keyframes:0
+  - initial.inputMap=false
+  - initial.errors=0
+  - initial.dependencies=0
+
+prepared:
+  - prepared=true
+  - prepared.source=".foo-bar { color: red; }"
+  - prepared.analysis=nested:false specials:false animations:false keyframes:0
+  - prepared.inputMap=false
+  - prepared.errors=0
+  - prepared.dependencies=0
+
+transform:
+  - code=".foo-bar { color: red; }"
+  - selectorsScopedInSource=false
+  - includeNesting=false
+  - inputSourceMap=false
+  - cssModules={}
+
+final:
+  - code=".Ltp18W_foo-bar {\\n  color: red;\\n}\\n"
+  - map=false
+  - errors=0
+  - dependencies=0
+  - modules={"fooBar":"Ltp18W_foo-bar"}"
+`;
+
+exports[`'css vars and animation finalize pass' 1`] = `
+"source: .card {
+  color: v-bind(themeColor);
+  animation: fade 1s;
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+context:
+  - filename=trace.css
+  - scoped=true
+  - modules=false
+  - sourceMap=false
+  - isProd=false
+
+initial:
+  - initial.source=".card {\\n  color: v-bind(themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
+  - initial.analysis=nested:false specials:false animations:true keyframes:1
+  - initial.inputMap=false
+  - initial.errors=0
+  - initial.dependencies=0
+
+prepared:
+  - prepared=true
+  - prepared.source=".card {\\n  color: var(--trace-themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
+  - prepared.analysis=nested:false specials:false animations:true keyframes:1
+  - prepared.inputMap=false
+  - prepared.errors=0
+  - prepared.dependencies=0
+
+transform:
+  - code=".card[data-v-trace]{\\n  color: var(--trace-themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
+  - selectorsScopedInSource=true
+  - includeNesting=false
+  - inputSourceMap=false
+  - cssModules=undefined
+
+final:
+  - code=".card[data-v-trace] {\\n  color: var(--trace-themeColor);\\n  animation: 1s fade-trace;\\n}\\n\\n@keyframes fade-trace {\\n  from {\\n    opacity: 0;\\n  }\\n\\n  to {\\n    opacity: 1;\\n  }\\n}\\n"
+  - map=false
+  - errors=0
+  - dependencies=0
+  - modules=undefined"
+`;
+
+exports[`'nested scoped source preparation' 1`] = `
+"source: .card {
+  color: red;
+  .title { color: blue; }
+}
+
+context:
+  - filename=trace.css
+  - scoped=true
+  - modules=false
+  - sourceMap=false
+  - isProd=false
+
+initial:
+  - initial.source=".card {\\n  color: red;\\n  .title { color: blue; }\\n}"
+  - initial.analysis=nested:true specials:false animations:false keyframes:0
+  - initial.inputMap=false
+  - initial.errors=0
+  - initial.dependencies=0
+
+prepared:
+  - prepared=true
+  - prepared.source=":global(.card) {\\n  & {color: red;}\\n  .title { color: blue; }\\n}"
+  - prepared.analysis=nested:true specials:true animations:false keyframes:0
+  - prepared.inputMap=false
+  - prepared.errors=0
+  - prepared.dependencies=0
+
+transform:
+  - code=".card{&[data-v-trace]{color: red;}.title[data-v-trace]{ color: blue; }\\n}"
+  - selectorsScopedInSource=true
+  - includeNesting=true
+  - inputSourceMap=false
+  - cssModules=undefined
+
+final:
+  - code=".card[data-v-trace] {\\n  color: red;\\n}\\n\\n.card .title[data-v-trace] {\\n  color: #00f;\\n}\\n"
+  - map=false
+  - errors=0
+  - dependencies=0
+  - modules=undefined"
+`;
+
+exports[`'simple scoped source path' 1`] = `
+"source: .card .title { color: red; }
+
+context:
+  - filename=trace.css
+  - scoped=true
+  - modules=false
+  - sourceMap=false
+  - isProd=false
+
+initial:
+  - initial.source=".card .title { color: red; }"
+  - initial.analysis=nested:false specials:false animations:false keyframes:0
+  - initial.inputMap=false
+  - initial.errors=0
+  - initial.dependencies=0
+
+prepared:
+  - prepared=true
+  - prepared.source=".card .title { color: red; }"
+  - prepared.analysis=nested:false specials:false animations:false keyframes:0
+  - prepared.inputMap=false
+  - prepared.errors=0
+  - prepared.dependencies=0
+
+transform:
+  - code=".card .title[data-v-trace]{ color: red; }"
+  - selectorsScopedInSource=true
+  - includeNesting=false
+  - inputSourceMap=false
+  - cssModules=undefined
+
+final:
+  - code=".card .title[data-v-trace] {\\n  color: red;\\n}\\n"
+  - map=false
+  - errors=0
+  - dependencies=0
+  - modules=undefined"
+`;

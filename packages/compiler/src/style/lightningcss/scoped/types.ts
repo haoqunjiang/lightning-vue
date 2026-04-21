@@ -5,9 +5,6 @@ export type CombinatorSelector = Extract<SelectorComponent, { type: "combinator"
 export type PseudoClassSelector = Extract<SelectorComponent, { type: "pseudo-class" }>;
 export type PseudoElementSelector = Extract<SelectorComponent, { type: "pseudo-element" }>;
 export type ScopeInjectMode = "none" | "normal" | "slot";
-// `direct` selectors can place scope immediately; `normalized` selectors need
-// container/deep structure normalization before anchor selection.
-export type ScopePlacementKind = "direct" | "normalized";
 
 export type SelectorContainerSelector = PseudoClassSelector & {
   kind: "has" | "is" | "not" | "where";
@@ -32,14 +29,28 @@ export interface ScopedStyleTransformContext {
   id: string;
 }
 
-export interface SelectorPlacementClassification {
-  needsNestedScopeRewrite: boolean;
-  placementKind: ScopePlacementKind;
-}
+// The placement phase only needs one plan value from expansion:
+// - `direct`: place scope immediately
+// - `rewrite-nested`: place directly, then revisit nested scope containers
+// - `normalize-and-rewrite`: split mixed same-element/descendant structure
+//   before placement, then revisit nested scope containers
+export type SelectorPlacementPlan = "direct" | "rewrite-nested" | "normalize-and-rewrite";
 
 export interface ExpandedScopedSelector {
   deep: boolean;
-  needsNestedScopeRewrite: boolean;
-  placementKind: ScopePlacementKind;
+  placement: SelectorPlacementPlan;
   selector: Selector;
+}
+
+export interface PlacedScopedSelector {
+  deep: boolean;
+  selector: Selector;
+}
+
+export function placementPlanNeedsNestedRewrite(plan: SelectorPlacementPlan): boolean {
+  return plan !== "direct";
+}
+
+export function placementPlanNeedsNormalization(plan: SelectorPlacementPlan): boolean {
+  return plan === "normalize-and-rewrite";
 }

@@ -6,8 +6,10 @@ import { compoundHasRelevantScopeAttribute, shouldInjectContainerScope } from ".
 import { cleanupScopedSelectorMarkers, removeNoInjectMarkers } from "./cleanup";
 import { getNestedScopeContext, rewriteNestedScopeContainers } from "./nested";
 import { classifySelectorForPlacement, normalizeSelectorForPlacement } from "./structure";
+import { placementPlanNeedsNestedRewrite, placementPlanNeedsNormalization } from "../../types";
 import type {
   ExpandedScopedSelector,
+  PlacedScopedSelector,
   ScopeInjectMode,
   ScopedSelectorHelpers,
   SelectorContainerSelector,
@@ -19,8 +21,8 @@ export function placeScopeAttributes(
   result: ExpandedScopedSelector,
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
-): ExpandedScopedSelector[] {
-  const placedSelectors: ExpandedScopedSelector[] = [];
+): PlacedScopedSelector[] {
+  const placedSelectors: PlacedScopedSelector[] = [];
   appendPlacedScopeAttributes(result, injectMode, helpers, placedSelectors);
   return placedSelectors;
 }
@@ -29,7 +31,7 @@ export function appendPlacedScopeAttributes(
   result: ExpandedScopedSelector,
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
-  target: ExpandedScopedSelector[],
+  target: PlacedScopedSelector[],
 ): void {
   const effectiveMode = containsNoInjectMarker(result.selector) ? "none" : injectMode;
   const selector = removeNoInjectMarkers(result.selector);
@@ -37,10 +39,9 @@ export function appendPlacedScopeAttributes(
     stripLeadingUniversal(selector);
   }
 
-  const placementReadySelectors =
-    result.placementKind === "normalized"
-      ? normalizeSelectorForPlacement(selector, helpers)
-      : [selector];
+  const placementReadySelectors = placementPlanNeedsNormalization(result.placement)
+    ? normalizeSelectorForPlacement(selector, helpers)
+    : [selector];
 
   for (const placementReadySelector of placementReadySelectors) {
     target.push(
@@ -54,18 +55,37 @@ export function appendPlacedScopeAttributes(
   }
 }
 
+function appendPlacedScopeAttributesOnSelector(
+  selector: Selector,
+  injectMode: ScopeInjectMode,
+  helpers: ScopedSelectorHelpers,
+  target: PlacedScopedSelector[],
+): void {
+  const classification = classifySelectorForPlacement(selector);
+  appendPlacedScopeAttributes(
+    {
+      deep: false,
+      placement: classification,
+      selector,
+    },
+    injectMode,
+    helpers,
+    target,
+  );
+}
+
 function placeScopeAttributesOnPlacementReadySelector(
   result: ExpandedScopedSelector,
   selector: Selector,
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
-): ExpandedScopedSelector {
+): PlacedScopedSelector {
   const anchorIndex = findInjectionAnchor(selector);
   const nestedContext = getNestedScopeContext(injectMode);
   const rewriteLocalBranch = (nestedSelector: Selector) =>
     rewriteNestedLocalBranch(nestedSelector, helpers);
   const rewriteNestedContainers = (currentSelector: Selector) =>
-    result.needsNestedScopeRewrite
+    placementPlanNeedsNestedRewrite(result.placement)
       ? rewriteNestedScopeContainers(currentSelector, nestedContext, helpers, rewriteLocalBranch)
       : currentSelector;
 
@@ -96,12 +116,7 @@ function placeScopeAttributesOnPlacementReadySelector(
 }
 
 function rewriteNestedLocalBranch(selector: Selector, helpers: ScopedSelectorHelpers): Selector {
-  return placeSingleScopeResult(
-    createExpandedPlacementState(selector),
-    "normal",
-    helpers,
-    "nested local branch rewrite",
-  );
+  return placeSingleScopedSelector(selector, "normal", helpers, "nested local branch rewrite");
 }
 
 function injectScopeIntoContainer(
@@ -110,20 +125,15 @@ function injectScopeIntoContainer(
   anchorIndex: number,
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
-): ExpandedScopedSelector {
+): PlacedScopedSelector {
   let nestedDeep = deep;
   const container = selector[anchorIndex] as SelectorContainerSelector;
   const originalNestedSelectors = container.selectors;
   const nestedSelectors: Selector[] = [];
 
   for (const nestedSelector of container.selectors) {
-    const nestedResults: ExpandedScopedSelector[] = [];
-    appendPlacedScopeAttributes(
-      createExpandedPlacementState(nestedSelector),
-      injectMode,
-      helpers,
-      nestedResults,
-    );
+    const nestedResults: PlacedScopedSelector[] = [];
+    appendPlacedScopeAttributesOnSelector(nestedSelector, injectMode, helpers, nestedResults);
 
     for (const nestedResult of nestedResults) {
       nestedDeep ||= nestedResult.deep;
@@ -160,34 +170,23 @@ function containsNoInjectMarker(selector: Selector): boolean {
   return selector.some(isNoInjectMarker);
 }
 
-function placeSingleScopeResult(
-  result: ExpandedScopedSelector,
+function placeSingleScopedSelector(
+  selector: Selector,
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
   context: string,
 ): Selector {
-  const rewritten: ExpandedScopedSelector[] = [];
-  appendPlacedScopeAttributes(result, injectMode, helpers, rewritten);
+  const rewritten: PlacedScopedSelector[] = [];
+  appendPlacedScopeAttributesOnSelector(selector, injectMode, helpers, rewritten);
   if (rewritten.length !== 1) {
     throw new Error(`Expected a single selector result while handling ${context}.`);
   }
   return rewritten[0].selector;
 }
 
-function createExpandedPlacementState(selector: Selector): ExpandedScopedSelector {
-  const classification = classifySelectorForPlacement(selector);
-  return {
-    deep: false,
-    selector,
-    ...classification,
-  };
-}
-
-function createPlacedSelectorResult(deep: boolean, selector: Selector): ExpandedScopedSelector {
+function createPlacedSelectorResult(deep: boolean, selector: Selector): PlacedScopedSelector {
   return {
     deep,
-    needsNestedScopeRewrite: false,
-    placementKind: "direct",
     selector,
   };
 }

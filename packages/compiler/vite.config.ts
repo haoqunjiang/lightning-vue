@@ -10,7 +10,14 @@ export default defineConfig({
     __GLOBAL__: "false",
   },
   pack: {
-    entry: ["src/index.ts", "src/browser.ts"],
+    entry: [
+      "src/index.ts",
+      "src/browser.ts",
+      "src/debug.ts",
+      "src/debug/nesting.ts",
+      "src/debug/scopedSelector.ts",
+      "src/debug/styleCompile.ts",
+    ],
     format: ["esm", "cjs"],
     dts: true,
     define: {
