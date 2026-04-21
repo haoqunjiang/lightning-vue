@@ -47,7 +47,9 @@
     "build": "vp pack",
     "test": "vp test run",
     "bench": "vp test bench __tests__/compileStyle.bench.ts",
+    "bench:scoped": "vp test bench __tests__/scopedSelector.bench.ts",
     "check": "vp check src __tests__ package.json README.md ARCHITECTURE.md vite.config.ts tsconfig.json",
+    "test:trace": "vp test run __tests__/scopedSelector.trace.spec.ts",
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
