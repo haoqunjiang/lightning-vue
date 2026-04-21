@@ -8,6 +8,8 @@ import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 
 const props = defineProps<{
   modelValue: string;
+  minHeight?: number;
+  readOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -49,7 +51,6 @@ onMounted(() => {
     },
     fontSize: 14,
     lineHeight: 21,
-    lineNumbers: "on",
     roundedSelection: false,
     renderLineHighlight: "gutter",
     scrollBeyondLastLine: false,
@@ -60,6 +61,8 @@ onMounted(() => {
       top: 14,
       bottom: 14,
     },
+    readOnly: props.readOnly ?? false,
+    lineNumbers: props.readOnly ? "off" : "on",
   });
 
   editor.onDidChangeModelContent(() => {
@@ -83,6 +86,20 @@ watch(
   },
 );
 
+watch(
+  () => props.readOnly,
+  (readOnly) => {
+    if (!editor) {
+      return;
+    }
+
+    editor.updateOptions({
+      readOnly: readOnly ?? false,
+      lineNumbers: readOnly ? "off" : "on",
+    });
+  },
+);
+
 onBeforeUnmount(() => {
   editor?.dispose();
   model?.dispose();
@@ -90,12 +107,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="root" class="editor-root" />
+  <div
+    ref="root"
+    class="editor-root"
+    :style="{ '--editor-min-height': `${props.minHeight ?? 156}px` }"
+  />
 </template>
 
 <style scoped>
 .editor-root {
-  min-height: 180px;
+  min-height: var(--editor-min-height);
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(196, 205, 227, 0.95);

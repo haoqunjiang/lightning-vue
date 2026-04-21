@@ -26,14 +26,14 @@ const highlighted = computed(() =>
 <style scoped>
 .pane {
   display: grid;
-  align-content: start;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0.65rem;
   min-width: 0;
+  min-height: 300px;
   padding: 0.95rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(196, 205, 227, 0.75);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(196, 205, 227, 0.8);
 }
 
 .pane.error {
@@ -50,8 +50,9 @@ const highlighted = computed(() =>
 
 .pane-header h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
   color: #17243f;
+  font-weight: 500;
 }
 
 .error-tag {
@@ -60,18 +61,20 @@ const highlighted = computed(() =>
   background: rgba(220, 38, 38, 0.1);
   color: #b91c1c;
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 pre {
   overflow: auto;
   margin: 0;
-  padding: 0.9rem;
+  padding: 0.95rem;
   border-radius: 12px;
   background: #fbfcfe;
   border: 1px solid rgba(216, 222, 238, 0.85);
   font-size: 0.84rem;
   line-height: 1.55;
+  min-height: 0;
+  max-height: 360px;
 }
 
 :deep(code) {
