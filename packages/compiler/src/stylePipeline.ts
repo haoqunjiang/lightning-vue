@@ -9,7 +9,10 @@ import {
   rewriteCssVarsInStyleSource,
   rewriteCssVarsInStyleSourceWithMap,
 } from "./style/cssVars";
-import { analyzeLightningCssStyle } from "./style/lightningcss/analysis";
+import {
+  analyzeLightningCssStyle,
+  deriveAnalysisAfterNestedNormalization,
+} from "./style/lightningcss/analysis";
 import { normalizeNestedStyleBlocks } from "./style/lightningcss/nesting/normalize";
 import {
   rewriteNormalizedAnimationDeclarations,
@@ -41,6 +44,9 @@ export interface StyleCompileState {
   inputMap: RawSourceMap | undefined;
   source: string;
 }
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 
 export interface SourceScopingResult {
   scopedSource: string;
@@ -123,8 +129,6 @@ export function rewriteCssVarsInState(
   } else {
     state.source = rewriteCssVarsInStyleSource(state.source, context.shortId, context.isProd);
   }
-
-  refreshStyleAnalysis(state, context);
 }
 
 export function normalizeNestedStylesInState(
@@ -148,7 +152,9 @@ export function normalizeNestedStylesInState(
 
   state.source = normalizedSource.code;
   state.inputMap = normalizedSource.map;
-  refreshStyleAnalysis(state, context);
+  state.analysis = deriveAnalysisAfterNestedNormalization(state.analysis, {
+    introducedScopedSelectorSpecials: normalizedSource.introducedScopedSelectorSpecials,
+  });
 }
 
 export function computeScopedSource(
@@ -274,13 +280,9 @@ export function createLightningCssModulesConfig(options: CSSModulesOptions) {
 }
 
 export function encodeCode(code: string) {
-  return new TextEncoder().encode(code);
+  return textEncoder.encode(code);
 }
 
 export function decodeCode(code: Uint8Array) {
-  return new TextDecoder().decode(code);
-}
-
-function refreshStyleAnalysis(state: StyleCompileState, context: StyleCompileContext): void {
-  state.analysis = analyzeLightningCssStyle(state.source, context.id);
+  return textDecoder.decode(code);
 }

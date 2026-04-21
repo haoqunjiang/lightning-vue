@@ -208,24 +208,32 @@ hatch meaning “keep this selector branch, but do not inject local scope onto
 it”. Later, when that source is parsed for scoped rewriting, `:global(...)`
 lowers into the internal `[__VUE_SCOPE_NO_INJECT__]` marker.
 
-### The Three Scoped Rewrite Phases
+### The Scoped Selector Pipeline
 
-The implementation lives in:
+The scoped rewrite is split into:
 
-- [scoped/selectorExpand.ts](./src/style/lightningcss/scoped/selectorExpand.ts)
-- [scoped/selectorInject.ts](./src/style/lightningcss/scoped/selectorInject.ts)
 - [scoped/rewrite.ts](./src/style/lightningcss/scoped/rewrite.ts)
+- [scoped/selector/direct.ts](./src/style/lightningcss/scoped/selector/direct.ts)
+- [scoped/selector/expansion.ts](./src/style/lightningcss/scoped/selector/expansion.ts)
+- [scoped/selector/placement/](./src/style/lightningcss/scoped/selector/placement)
 
-The phases are:
+There are two selector paths:
 
-1. **Carrier lowering**
-2. **Scope placement**
-3. **Marker cleanup**
+- **direct path**
+  selectors with no Vue carriers can inject `[data-v-xxx]` immediately
+- **expanded path**
+  selectors with `:deep(...)`, `:slotted(...)`, `:global(...)`, or mixed
+  `:is(...)` / `:where(...)` structure first become explicit internal states
 
-#### Phase 1: Carrier Lowering
+The expanded path has three stages:
 
-Carrier lowering turns Vue syntax into ordinary selector states plus internal
-markers.
+1. **expansion**
+2. **placement**
+3. **cleanup**
+
+#### 1. Expansion
+
+Expansion turns Vue syntax into ordinary selector states plus internal markers.
 
 Examples:
 
@@ -265,10 +273,22 @@ meaning:
 - then a no-inject marker is prepended so the later placement phase does not
   inject a second scope attribute on top of it
 
-#### Phase 2: Scope Placement
+Expansion produces an explicit `ExpandedScopedSelector` state:
 
-Once a selector is in the lowered form, the compiler can decide where to insert
-the real scope attribute:
+- `selector`
+- `deep`
+- `placementKind`
+- `needsNestedScopeRewrite`
+
+That state is the handoff between expansion and placement.
+
+It exists for a simple reason: placement should not have to rediscover the same
+facts from raw selector syntax on every pass.
+
+#### 2. Placement
+
+Once a selector is in the expanded form, the compiler can decide where to
+insert the real scope attribute:
 
 - normal scope: `[data-v-xxx]`
 - slot scope: `[data-v-xxx-s]`
@@ -305,7 +325,29 @@ and not:
 .panel[data-v-xxx] .title[data-v-xxx]
 ```
 
-#### Phase 3: Marker Cleanup
+Placement itself is split further:
+
+- [placement/structure.ts](./src/style/lightningcss/scoped/selector/placement/structure.ts)
+  decides whether selector structure must split before anchor selection
+- [placement/compound.ts](./src/style/lightningcss/scoped/selector/placement/compound.ts)
+  owns compound-level anchor checks and idempotent “already scoped?” logic
+- [placement/nested.ts](./src/style/lightningcss/scoped/selector/placement/nested.ts)
+  rewrites nested `:is(...)` / `:where(...)` branches after outer placement
+- [placement/index.ts](./src/style/lightningcss/scoped/selector/placement/index.ts)
+  coordinates placement itself
+
+The two ideas to keep in mind are:
+
+- `placementKind` answers:
+  does this selector structure need to split before we choose an anchor?
+- nested scope context answers:
+  are we still on the local side, or already after `:deep(...)`, inside
+  `:slotted(...)`, or fully unscoped?
+
+Those are different questions, and separating them is what keeps the placement
+code understandable.
+
+#### 3. Cleanup
 
 After the real scope attributes have been placed, the temporary markers are
 removed recursively, including inside selector containers such as `:is(...)`,
@@ -422,7 +464,22 @@ Source-based nested normalization and nested-context analysis.
 
 ### `src/style/lightningcss/scoped/`
 
-Scoped selector rewriting, source scoping, and legacy syntax rejection.
+Vue-specific scoped-style policy.
+
+Important submodules:
+
+- `rewrite.ts`
+  selector-pipeline entrypoint
+- `selector/direct.ts`
+  cheap no-carrier path
+- `selector/expansion.ts`
+  carrier expansion into explicit selector states
+- `selector/placement/`
+  structure normalization, compound checks, nested rewriting, and cleanup
+- `source.ts`
+  parsed source-level scoping
+- `legacy.ts`
+  early legacy-syntax rejection
 
 ### `src/style/lightningcss/scoped/animation/`
 

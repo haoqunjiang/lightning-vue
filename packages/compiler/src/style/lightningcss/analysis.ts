@@ -10,6 +10,22 @@ export interface LightningCssStyleAnalysis {
   keyframes: Record<string, string>;
 }
 
+export function deriveAnalysisAfterNestedNormalization(
+  analysis: LightningCssStyleAnalysis,
+  options: {
+    introducedScopedSelectorSpecials: boolean;
+  },
+): LightningCssStyleAnalysis {
+  if (!options.introducedScopedSelectorSpecials) {
+    return analysis;
+  }
+
+  return {
+    ...analysis,
+    hasScopedSelectorSpecials: true,
+  };
+}
+
 export function analyzeLightningCssStyle(source: string, id: string): LightningCssStyleAnalysis {
   const shortId = id.replace(/^data-v-/, "");
   const analysis: LightningCssStyleAnalysis = {

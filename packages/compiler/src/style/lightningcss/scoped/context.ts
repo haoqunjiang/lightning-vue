@@ -9,7 +9,6 @@ import type {
 
 interface ScopedSelectorOptions {
   id: string;
-  keyframes?: Record<string, string>;
 }
 
 const deepMarkerName = "__VUE_SCOPE_DEEP__";
@@ -24,8 +23,6 @@ export function createScopedStyleTransformContext(
   return {
     helpers: createScopedSelectorHelpers(scopeId),
     id: scopeId,
-    keyframes: Object.assign(Object.create(null), options.keyframes),
-    shortId,
   };
 }
 

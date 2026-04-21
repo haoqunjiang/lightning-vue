@@ -36,7 +36,6 @@ export function createLightningCssStyleVisitor(
     analysis && analysis.hasScopedSelectorSpecials !== undefined
       ? analysis.hasScopedSelectorSpecials
       : true;
-  const keyframes = analysis ? analysis.keyframes : undefined;
   const visitor: LightningCssStyleVisitor = {};
 
   if (!scoped) {
@@ -48,7 +47,6 @@ export function createLightningCssStyleVisitor(
   if (!selectorsScopedInSource) {
     const context = createScopedStyleTransformContext({
       id,
-      keyframes,
     });
 
     visitor.Selector = (selector) =>

@@ -20,8 +20,14 @@ import {
 
 export interface NormalizeNestedStyleBlocksResult {
   code: string;
+  introducedScopedSelectorSpecials: boolean;
   map: RawSourceMap | undefined;
   normalized: boolean;
+}
+
+interface ApplyBlockDecorationResult {
+  changed: boolean;
+  introducedScopedSelectorSpecials: boolean;
 }
 
 interface NormalizeBlockState {
@@ -64,18 +70,21 @@ export function normalizeNestedStyleBlocks(
   // declaration/rule bodies.
   const s = new MagicString(source);
   let normalized = false;
+  let introducedScopedSelectorSpecials = false;
 
-  const noteChange = (changed: boolean) => {
-    normalized ||= changed;
+  const noteResult = (result: ApplyBlockDecorationResult) => {
+    normalized ||= result.changed;
+    introducedScopedSelectorSpecials ||= result.changed && result.introducedScopedSelectorSpecials;
   };
 
   for (const block of parseCssBlockTree(source)) {
-    noteChange(normalizeNestedBlock(block, s, source, initialNormalizeState()));
+    noteResult(normalizeNestedBlock(block, s, source, initialNormalizeState()));
   }
 
   if (!normalized) {
     return {
       code: source,
+      introducedScopedSelectorSpecials: false,
       map,
       normalized,
     };
@@ -84,6 +93,7 @@ export function normalizeNestedStyleBlocks(
   if (!sourceMap) {
     return {
       code: s.toString(),
+      introducedScopedSelectorSpecials,
       map: undefined,
       normalized,
     };
@@ -97,6 +107,7 @@ export function normalizeNestedStyleBlocks(
 
   return {
     code: s.toString(),
+    introducedScopedSelectorSpecials,
     map: map
       ? (merge(map, nextMap) as RawSourceMap)
       : (JSON.parse(nextMap.toString()) as RawSourceMap),
@@ -116,14 +127,17 @@ function normalizeNestedBlock(
   s: MagicString,
   source: string,
   state: NormalizeBlockState,
-): boolean {
+): ApplyBlockDecorationResult {
   switch (block.blockKind) {
     case "style":
       return normalizeStyleRuleBlock(block, s, source, state);
     case "at-rule":
       return normalizeAtRuleBlock(block, s, source, state);
     default:
-      return false;
+      return {
+        changed: false,
+        introducedScopedSelectorSpecials: false,
+      };
   }
 }
 
@@ -132,7 +146,7 @@ function normalizeStyleRuleBlock(
   s: MagicString,
   source: string,
   state: NormalizeBlockState,
-): boolean {
+): ApplyBlockDecorationResult {
   const plan = planStyleRuleNormalization(block, state);
   return applyStyleRuleNormalizationPlan(block, s, source, plan);
 }
@@ -183,7 +197,7 @@ function normalizeAtRuleBlock(
   s: MagicString,
   source: string,
   state: NormalizeBlockState,
-): boolean {
+): ApplyBlockDecorationResult {
   const plan = planAtRuleNormalization(block, state);
   return applyAtRuleNormalizationPlan(block, s, source, plan);
 }
@@ -213,8 +227,9 @@ function normalizeChildBlocks(
   styleState: NormalizeBlockState,
   atRuleState: NormalizeBlockState,
   hoistAtRulesToParentEnd?: number,
-): boolean {
+): ApplyBlockDecorationResult {
   let changed = false;
+  let introducedScopedSelectorSpecials = false;
 
   for (const child of block.children) {
     if (
@@ -226,16 +241,20 @@ function normalizeChildBlocks(
       continue;
     }
 
-    changed =
-      normalizeNestedBlock(
-        child,
-        s,
-        source,
-        child.blockKind === "style" ? styleState : atRuleState,
-      ) || changed;
+    const childResult = normalizeNestedBlock(
+      child,
+      s,
+      source,
+      child.blockKind === "style" ? styleState : atRuleState,
+    );
+    changed ||= childResult.changed;
+    introducedScopedSelectorSpecials ||= childResult.introducedScopedSelectorSpecials;
   }
 
-  return changed;
+  return {
+    changed,
+    introducedScopedSelectorSpecials,
+  };
 }
 
 function createBlockDecorationPlan(behavior: StyleRuleBehavior): BlockDecorationPlan {
@@ -271,23 +290,26 @@ function applyStyleRuleNormalizationPlan(
   s: MagicString,
   source: string,
   plan: StyleRuleNormalizationPlan,
-): boolean {
+): ApplyBlockDecorationResult {
   if (plan.warningMessage) {
     warnOnce(plan.warningMessage);
   }
 
-  let changed = applyBlockDecorationPlan(block, s, source, plan);
-  changed =
-    normalizeChildBlocks(
-      block,
-      s,
-      source,
-      plan.styleState,
-      plan.atRuleState,
-      plan.hoistAtRulesToParentEnd,
-    ) || changed;
+  const decoration = applyBlockDecorationPlan(block, s, source, plan);
+  const children = normalizeChildBlocks(
+    block,
+    s,
+    source,
+    plan.styleState,
+    plan.atRuleState,
+    plan.hoistAtRulesToParentEnd,
+  );
 
-  return changed;
+  return {
+    changed: decoration.changed || children.changed,
+    introducedScopedSelectorSpecials:
+      decoration.introducedScopedSelectorSpecials || children.introducedScopedSelectorSpecials,
+  };
 }
 
 function applyAtRuleNormalizationPlan(
@@ -295,11 +317,15 @@ function applyAtRuleNormalizationPlan(
   s: MagicString,
   source: string,
   plan: AtRuleNormalizationPlan,
-): boolean {
-  let changed = applyBlockDecorationPlan(block, s, source, plan);
-  changed = normalizeChildBlocks(block, s, source, plan.styleState, plan.atRuleState) || changed;
+): ApplyBlockDecorationResult {
+  const decoration = applyBlockDecorationPlan(block, s, source, plan);
+  const children = normalizeChildBlocks(block, s, source, plan.styleState, plan.atRuleState);
 
-  return changed;
+  return {
+    changed: decoration.changed || children.changed,
+    introducedScopedSelectorSpecials:
+      decoration.introducedScopedSelectorSpecials || children.introducedScopedSelectorSpecials,
+  };
 }
 
 function applyBlockDecorationPlan(
@@ -307,19 +333,33 @@ function applyBlockDecorationPlan(
   s: MagicString,
   source: string,
   plan: BlockDecorationPlan,
-): boolean {
+): ApplyBlockDecorationResult {
   let changed = false;
+  let introducedScopedSelectorSpecials = false;
 
   // Context-only parent rules should not receive the normal scope attribute
   // themselves. They only provide nesting context for the explicit `& { ... }`
   // wrapper blocks that we synthesize below.
   if (plan.disableCurrentRuleInjection) {
-    changed = wrapPreludeInNoInjectCarrier(block, s) || changed;
+    const wrappedPrelude = wrapPreludeInNoInjectCarrier(block, s);
+    changed ||= wrappedPrelude;
+    introducedScopedSelectorSpecials ||= wrappedPrelude;
   }
 
   if (plan.declarationWrapperPrelude) {
-    changed = wrapTopLevelTextSegments(block, s, source, plan.declarationWrapperPrelude) || changed;
+    const wrappedTopLevelText = wrapTopLevelTextSegments(
+      block,
+      s,
+      source,
+      plan.declarationWrapperPrelude,
+    );
+    changed ||= wrappedTopLevelText;
+    introducedScopedSelectorSpecials ||=
+      wrappedTopLevelText && plan.declarationWrapperPrelude.includes(":global(");
   }
 
-  return changed;
+  return {
+    changed,
+    introducedScopedSelectorSpecials,
+  };
 }

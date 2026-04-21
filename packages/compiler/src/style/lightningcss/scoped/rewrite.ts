@@ -1,18 +1,13 @@
 import type { Selector } from "lightningcss";
 import { rewriteDirectScopedSelector } from "./selector/direct";
 import { canUseDirectScopeRewrite, expandScopeCarriers } from "./selector/expansion";
-import { cleanupScopedSelectorMarkers, placeScopeAttributes } from "./selector/placement";
+import { appendPlacedScopeAttributes, cleanupScopedSelectorMarkers } from "./selector/placement";
 import type {
   ExpandedScopedSelector,
   ScopeInjectMode,
   ScopedSelectorHelpers,
   ScopedStyleTransformContext,
 } from "./types";
-
-interface ScopedSelectorRewriteResult {
-  deep: boolean;
-  selectors: Selector[];
-}
 
 export function rewriteScopedSelector(
   selector: Selector,
@@ -22,7 +17,7 @@ export function rewriteScopedSelector(
     return rewriteDirectScopedSelector(selector, context.helpers);
   }
 
-  return rewriteExpandedScopedSelector(selector, "normal", context.helpers).selectors;
+  return rewriteExpandedScopedSelector(selector, "normal", context.helpers);
 }
 
 /**
@@ -43,7 +38,7 @@ export function appendRewrittenScopedSelectors(
     return;
   }
 
-  target.push(...rewriteExpandedScopedSelector(selector, "normal", context.helpers).selectors);
+  appendExpandedScopedSelectors(selector, "normal", context.helpers, target);
 }
 
 export function rewriteSimpleScopedSelector(
@@ -57,15 +52,22 @@ function rewriteExpandedScopedSelector(
   selector: Selector,
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
-): ScopedSelectorRewriteResult {
-  const expanded = expandScopedSelectorCarriers(selector, helpers);
-  const scoped = placeScopeAttributesOnExpandedSelectors(expanded, injectMode, helpers);
-  const rewritten = cleanupScopedSelectorResults(scoped);
+): Selector[] {
+  const rewrittenSelectors: Selector[] = [];
+  appendExpandedScopedSelectors(selector, injectMode, helpers, rewrittenSelectors);
+  return rewrittenSelectors;
+}
 
-  return {
-    selectors: rewritten.map((result) => result.selector),
-    deep: rewritten.some((result) => result.deep),
-  };
+function appendExpandedScopedSelectors(
+  selector: Selector,
+  injectMode: ScopeInjectMode,
+  helpers: ScopedSelectorHelpers,
+  target: Selector[],
+): void {
+  const expanded = expandScopedSelectorCarriers(selector, helpers);
+  const scoped: ExpandedScopedSelector[] = [];
+  appendPlacedScopeAttributesOnExpandedSelectors(expanded, injectMode, helpers, scoped);
+  appendCleanedScopedSelectorResults(scoped, target);
 }
 
 function expandScopedSelectorCarriers(
@@ -79,24 +81,26 @@ function expandScopedSelectorCarriers(
   return expandScopeCarriers(selector, helpers);
 }
 
-function placeScopeAttributesOnExpandedSelectors(
+function appendPlacedScopeAttributesOnExpandedSelectors(
   expanded: ExpandedScopedSelector[],
   injectMode: ScopeInjectMode,
   helpers: ScopedSelectorHelpers,
-): ExpandedScopedSelector[] {
+  target: ExpandedScopedSelector[],
+): void {
   // Phase 2: interpret no-inject markers and place component or slot scope
   // attributes on the expanded selector states.
-  return expanded.flatMap((result) => placeScopeAttributes(result, injectMode, helpers));
+  for (const result of expanded) {
+    appendPlacedScopeAttributes(result, injectMode, helpers, target);
+  }
 }
 
-function cleanupScopedSelectorResults(
+function appendCleanedScopedSelectorResults(
   rewritten: ExpandedScopedSelector[],
-): ExpandedScopedSelector[] {
+  target: Selector[],
+): void {
   // Phase 3: remove internal deep/no-inject markers once scope placement is
   // complete, recursively cleaning any selector containers.
-  return rewritten.map((result) => ({
-    deep: result.deep,
-    placementKind: "direct",
-    selector: cleanupScopedSelectorMarkers(result.selector),
-  }));
+  for (const result of rewritten) {
+    target.push(cleanupScopedSelectorMarkers(result.selector));
+  }
 }

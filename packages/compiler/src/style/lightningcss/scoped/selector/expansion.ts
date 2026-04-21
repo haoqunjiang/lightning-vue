@@ -4,7 +4,7 @@ import { parseSelectorListFromTokens } from "@lightning-vue/utils";
 import type { ScopeCarrierKind } from "../../scopeCarriers";
 import { isScopeCarrierSelector, scopeCarrierParserOptions } from "../../scopeCarriers";
 import { cloneAttribute, cloneCombinator, isCombinator, isDeepMarker } from "../context";
-import { placeScopeAttributes } from "./placement";
+import { appendPlacedScopeAttributes } from "./placement";
 import { isScopeContainer, isSelectorContainer } from "./direct";
 import type {
   ExpandedScopedSelector,
@@ -48,7 +48,7 @@ export function expandScopeCarriers(
   // A single input selector may fan out into many output states because carrier
   // pseudos such as `:deep(...)`, `:global(...)`, and `:slotted(...)` can each
   // contain selector lists.
-  let results: ExpandedSelectorStates = [createExpandedSelectorState([], false, "direct")];
+  let results: ExpandedSelectorStates = [createExpandedSelectorState([], false, false, "direct")];
 
   for (const component of selector) {
     const carrier = getScopeCarrier(component);
@@ -92,6 +92,7 @@ function expandGlobalCarrier(
         createExpandedSelectorState(
           prependNoInjectMarker(result.selector, helpers),
           result.deep,
+          result.needsNestedScopeRewrite,
           result.placementKind,
         ),
       );
@@ -113,7 +114,7 @@ function expandSlottedCarrier(
   for (const innerSelector of carrier.selectors) {
     const innerResults = expandScopeCarriers(innerSelector, helpers);
     for (const result of innerResults) {
-      slotScopedInnerSelectors.push(...placeScopeAttributes(result, "slot", helpers));
+      appendPlacedScopeAttributes(result, "slot", helpers, slotScopedInnerSelectors);
     }
   }
 
@@ -124,6 +125,7 @@ function expandSlottedCarrier(
         createExpandedSelectorState(
           prependNoInjectMarker([...state.selector, ...innerSelector.selector], helpers),
           state.deep || innerSelector.deep,
+          state.needsNestedScopeRewrite || innerSelector.needsNestedScopeRewrite,
           state.placementKind,
         ),
       );
@@ -147,6 +149,7 @@ function expandDeepCarrier(
           createExpandedSelectorState(
             appendDeepSelector(state.selector, result.selector, helpers),
             true,
+            state.needsNestedScopeRewrite || result.needsNestedScopeRewrite,
             state.placementKind,
           ),
         );
@@ -162,13 +165,16 @@ function appendSelectorContainer(
   helpers: ScopedSelectorHelpers,
 ): ExpandedSelectorStates {
   let nestedDeep = false;
-  const nestedResults: ExpandedScopedSelector[] = [];
+  let nestedNeedsNormalizedPlacement = false;
+  let nestedNeedsScopeRewrite = isScopeContainer(component);
   const nestedSelectors: SelectorList = [];
   for (const nestedSelector of component.selectors) {
     const expandedResults = expandScopeCarriers(nestedSelector, helpers);
     for (const result of expandedResults) {
       nestedDeep ||= result.deep;
-      nestedResults.push(result);
+      nestedNeedsNormalizedPlacement ||=
+        result.placementKind === "normalized" || selectorStartsWithDeepBoundary(result.selector);
+      nestedNeedsScopeRewrite ||= result.needsNestedScopeRewrite;
       nestedSelectors.push(result.selector);
     }
   }
@@ -178,11 +184,12 @@ function appendSelectorContainer(
   }) as SelectorContainerSelector;
 
   for (const state of results) {
+    state.needsNestedScopeRewrite ||= nestedNeedsScopeRewrite;
     if (isScopeContainer(component)) {
       state.deep ||= nestedDeep;
       state.placementKind = mergeScopePlacementKinds(
         state.placementKind,
-        scopeContainerNeedsNormalizedPlacement(nestedResults) ? "normalized" : "direct",
+        nestedNeedsNormalizedPlacement ? "normalized" : "direct",
       );
     }
     state.selector.push(nextComponent);
@@ -234,10 +241,12 @@ function prependNoInjectMarker(selector: Selector, helpers: ScopedSelectorHelper
 function createExpandedSelectorState(
   selector: Selector,
   deep: boolean,
+  needsNestedScopeRewrite: boolean,
   placementKind: ScopePlacementKind,
 ): ExpandedScopedSelector {
   return {
     deep,
+    needsNestedScopeRewrite,
     placementKind,
     selector,
   };
@@ -248,13 +257,6 @@ function mergeScopePlacementKinds(
   right: ScopePlacementKind,
 ): ScopePlacementKind {
   return left === "normalized" || right === "normalized" ? "normalized" : "direct";
-}
-
-function scopeContainerNeedsNormalizedPlacement(results: ExpandedScopedSelector[]): boolean {
-  return results.some(
-    (result) =>
-      result.placementKind === "normalized" || selectorStartsWithDeepBoundary(result.selector),
-  );
 }
 
 function selectorStartsWithDeepBoundary(selector: Selector): boolean {

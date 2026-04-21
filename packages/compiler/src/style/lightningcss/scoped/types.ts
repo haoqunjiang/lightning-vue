@@ -30,12 +30,11 @@ export interface ScopedSelectorHelpers {
 export interface ScopedStyleTransformContext {
   helpers: ScopedSelectorHelpers;
   id: string;
-  keyframes: Record<string, string>;
-  shortId: string;
 }
 
 export interface ExpandedScopedSelector {
   deep: boolean;
+  needsNestedScopeRewrite: boolean;
   placementKind: ScopePlacementKind;
   selector: Selector;
 }
