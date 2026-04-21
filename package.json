@@ -15,7 +15,8 @@
     "sync:tests": "node tools/sync-vue-tests.mjs",
     "dev:playground": "vp run sfc-playground#dev",
     "dev:example": "vp run vite-example#dev",
-    "dev:divergence": "vp run divergence-playground#dev"
+    "dev:divergence": "vp run divergence-playground#dev",
+    "dev:ir": "vp run ir-playground#dev"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.6",
