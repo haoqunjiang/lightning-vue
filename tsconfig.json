@@ -7,6 +7,13 @@
     "moduleDetection": "force",
     "resolveJsonModule": true,
     "types": ["node", "vitest/globals"],
+    "paths": {
+      "@lightning-vue/compiler": ["./packages/compiler/src/index.ts"],
+      "@lightning-vue/compiler/browser": ["./packages/compiler/src/browser.ts"],
+      "@lightning-vue/compiler/debug": ["./packages/compiler/src/debug.ts"],
+      "@lightning-vue/compiler/debug/*": ["./packages/compiler/src/debug/*"],
+      "@lightning-vue/utils": ["./packages/utils/src/index.ts"]
+    },
     "strict": true,
     "noUnusedLocals": true,
     "declaration": true,

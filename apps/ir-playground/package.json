@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @lightning-vue/compiler build && vite",
-    "build": "pnpm --filter @lightning-vue/compiler build && vite build",
-    "check": "pnpm --filter @lightning-vue/compiler build && vp check src package.json vite.config.ts tsconfig.json"
+    "dev": "vite",
+    "build": "vite build",
+    "check": "vp check src package.json vite.config.ts tsconfig.json"
   },
   "dependencies": {
     "@lightning-vue/compiler": "workspace:*",

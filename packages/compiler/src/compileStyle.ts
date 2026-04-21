@@ -65,10 +65,14 @@ export function compileStyleWithLightningCss(
   return compileStyleWithLightningCssImpl(options);
 }
 
+const IS_BROWSER_STYLE_BUILD =
+  (typeof __GLOBAL__ !== "undefined" && __GLOBAL__) ||
+  (typeof __ESM_BROWSER__ !== "undefined" && __ESM_BROWSER__);
+
 function compileStyleWithLightningCssImpl(
   options: SFCStyleCompileOptions | SFCAsyncStyleCompileOptions,
 ): SFCStyleCompileResults {
-  if (__GLOBAL__ || __ESM_BROWSER__) {
+  if (IS_BROWSER_STYLE_BUILD) {
     throw new Error(
       "[@lightning-vue/compiler] `compileStyle` is not supported in the browser build.",
     );
@@ -204,7 +208,7 @@ function preprocess(
   preprocessor: StylePreprocessor,
   sourceMap: boolean,
 ): StylePreprocessorResults {
-  if ((__ESM_BROWSER__ || __GLOBAL__) && !options.preprocessCustomRequire) {
+  if (IS_BROWSER_STYLE_BUILD && !options.preprocessCustomRequire) {
     throw new Error(
       `[@lightning-vue/compiler] Style preprocessing in the browser build must ` +
         `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
