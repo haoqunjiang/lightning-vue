@@ -1,9 +1,9 @@
 ---
-name: codebase-improvement-loop
-description: Use when improving maintainability, performance, or architecture anywhere in lightning-vue. Enforces a disciplined loop: preserve baseline suites, add supplemental harnesses instead of mutating baselines, compare against saved baselines with repeated measurements, update architecture docs after design changes, and do not stop until correctness, performance, and explainability are all objectively acceptable.
+name: improving-codebase
+description: "Improves maintainability, performance, and architecture in lightning-vue. Use for non-trivial refactors, benchmark-driven optimization, harness work, or design cleanup that must preserve baseline suites, compare repeated measurements, update architecture docs, and keep phase boundaries observable."
 ---
 
-# Codebase Improvement Loop
+# Improving the Codebase
 
 Use this skill for non-trivial refactors, maintainability work, performance work,
 or architecture cleanup anywhere in this repo.
@@ -30,7 +30,7 @@ or architecture cleanup anywhere in this repo.
   debug surface under `src/` and build any playground on top of that surface
   instead of duplicating the trace logic in the app.
 - If the work turns into internal playground or debug-UI design, also follow
-  `.codex/skills/internal-playground-ux/SKILL.md`.
+  `.codex/skills/designing-internal-playgrounds/SKILL.md`.
 
 ## Baseline
 

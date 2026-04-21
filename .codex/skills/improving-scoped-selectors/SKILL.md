@@ -1,9 +1,9 @@
 ---
-name: scoped-selector-loop
-description: Use when working on scoped selector maintainability or performance in lightning-vue, especially under packages/compiler/src/style/lightningcss/scoped, related nesting/source-pipeline code, or the scoped selector harness. This is the scoped-selector-specific overlay on top of the repo-wide improvement loop.
+name: improving-scoped-selectors
+description: "Improves scoped selector behavior and performance in lightning-vue. Use for changes under packages/compiler/src/style/lightningcss/scoped, adjacent nesting or compileSession code, or scoped-selector harnesses that need the scoped correctness loop, benchmark baselines, and architecture checks."
 ---
 
-# Scoped Selector Loop
+# Improving Scoped Selectors
 
 Use this skill when changing the scoped-style pipeline, especially:
 
@@ -15,7 +15,7 @@ Use this skill when changing the scoped-style pipeline, especially:
 
 Start by following:
 
-- `.codex/skills/codebase-improvement-loop/SKILL.md`
+- `.codex/skills/improving-codebase/SKILL.md`
 
 This skill only adds the scoped-selector-specific triggers, commands, metrics,
 and architecture prompts.
