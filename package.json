@@ -19,8 +19,8 @@
     "dev:ir": "vp run ir-playground#dev"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.6",
     "@types/node": "catalog:",
+    "@vitejs/plugin-vue": "^6.0.6",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:"

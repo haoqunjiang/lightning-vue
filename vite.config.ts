@@ -1,8 +1,11 @@
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
-  fmt: {},
+  fmt: {
+    ignorePatterns: ["packages/compiler/upstream/**"],
+  },
   lint: {
+    ignorePatterns: ["packages/compiler/upstream/**"],
     options: {
       typeAware: true,
       typeCheck: true,

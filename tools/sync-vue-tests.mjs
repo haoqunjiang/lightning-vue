@@ -11,9 +11,7 @@ const repoRoot = path.resolve(__dirname, "..");
 const upstreamRootArg = process.argv[2];
 
 if (!upstreamRootArg) {
-  console.error(
-    "Usage: node tools/sync-vue-tests.mjs /path/to/vue-core-checkout",
-  );
+  console.error("Usage: node tools/sync-vue-tests.mjs /path/to/vue-core-checkout");
   process.exit(1);
 }
 
@@ -22,10 +20,7 @@ const upstreamSharedPath = path.join(
   upstreamRoot,
   "packages/compiler-sfc/__tests__/compileStyle.shared.ts",
 );
-const upstreamFixtureDir = path.join(
-  upstreamRoot,
-  "packages/compiler-sfc/__tests__/fixture",
-);
+const upstreamFixtureDir = path.join(upstreamRoot, "packages/compiler-sfc/__tests__/fixture");
 
 assertExists(upstreamSharedPath);
 assertExists(upstreamFixtureDir);
@@ -39,15 +34,9 @@ const generatedTestsRoot = path.join(repoRoot, "packages/compiler/__tests__");
 fs.mkdirSync(upstreamSnapshotRoot, { recursive: true });
 fs.mkdirSync(generatedTestsRoot, { recursive: true });
 
-const upstreamSharedSnapshotPath = path.join(
-  upstreamSnapshotRoot,
-  "compileStyle.shared.ts",
-);
+const upstreamSharedSnapshotPath = path.join(upstreamSnapshotRoot, "compileStyle.shared.ts");
 const upstreamFixtureSnapshotDir = path.join(upstreamSnapshotRoot, "fixture");
-const generatedSharedPath = path.join(
-  generatedTestsRoot,
-  "compileStyle.shared.ts",
-);
+const generatedSharedPath = path.join(generatedTestsRoot, "compileStyle.shared.ts");
 const generatedFixtureDir = path.join(generatedTestsRoot, "fixture");
 
 fs.copyFileSync(upstreamSharedPath, upstreamSharedSnapshotPath);
@@ -65,9 +54,7 @@ const generatedSource =
 
 fs.writeFileSync(generatedSharedPath, generatedSource);
 
-console.log(
-  `Synced compiler-sfc shared style tests from ${upstreamRoot} into packages/compiler.`,
-);
+console.log(`Synced compiler-sfc shared style tests from ${upstreamRoot} into packages/compiler.`);
 
 function assertExists(targetPath) {
   if (!fs.existsSync(targetPath)) {

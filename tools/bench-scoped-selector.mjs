@@ -5,10 +5,7 @@ import { dirname, join, relative, resolve } from "node:path";
 
 const repoRoot = process.cwd();
 const compilerRoot = resolve(repoRoot, "packages/compiler");
-const defaultBenchFiles = [
-  "__tests__/scopedSelector.bench.ts",
-  "__tests__/compileStyle.bench.ts",
-];
+const defaultBenchFiles = ["__tests__/scopedSelector.bench.ts", "__tests__/compileStyle.bench.ts"];
 
 const options = parseArgs(process.argv.slice(2));
 const benchFiles = options.benchFiles.length ? options.benchFiles : defaultBenchFiles;
@@ -19,14 +16,10 @@ try {
   const reports = [];
   for (let runIndex = 0; runIndex < runCount; runIndex++) {
     const outputPath = join(tempDir, `run-${runIndex + 1}.json`);
-    execFileSync(
-      "vp",
-      ["test", "bench", ...benchFiles, "--outputJson", outputPath, "--run"],
-      {
-        cwd: compilerRoot,
-        stdio: "inherit",
-      },
-    );
+    execFileSync("vp", ["test", "bench", ...benchFiles, "--outputJson", outputPath, "--run"], {
+      cwd: compilerRoot,
+      stdio: "inherit",
+    });
     reports.push(JSON.parse(readFileSync(outputPath, "utf8")));
   }
 
@@ -91,18 +84,16 @@ function aggregateReports(reports, benchFiles, runCount) {
       for (const group of file.groups ?? []) {
         for (const benchmark of group.benchmarks ?? []) {
           const key = `${filePath}::${group.fullName}::${benchmark.name}`;
-          const entry =
-            entries.get(key) ??
-            {
-              file: filePath,
-              group: group.fullName,
-              name: benchmark.name,
-              hzSamples: [],
-              meanMsSamples: [],
-              medianMsSamples: [],
-              rmeSamples: [],
-              sampleCountSamples: [],
-            };
+          const entry = entries.get(key) ?? {
+            file: filePath,
+            group: group.fullName,
+            name: benchmark.name,
+            hzSamples: [],
+            meanMsSamples: [],
+            medianMsSamples: [],
+            rmeSamples: [],
+            sampleCountSamples: [],
+          };
 
           entry.hzSamples.push(benchmark.hz);
           entry.meanMsSamples.push(benchmark.mean);
@@ -236,7 +227,15 @@ function formatHertz(value) {
 function formatPercentDelta(current, baseline, lowerIsBetter) {
   const delta = ((current - baseline) / baseline) * 100;
   const direction =
-    delta === 0 ? "flat" : lowerIsBetter ? (delta < 0 ? "faster" : "slower") : delta < 0 ? "lower" : "higher";
+    delta === 0
+      ? "flat"
+      : lowerIsBetter
+        ? delta < 0
+          ? "faster"
+          : "slower"
+        : delta < 0
+          ? "lower"
+          : "higher";
   return ` (${formatSignedPercent(delta)} vs baseline, ${direction})`;
 }
 

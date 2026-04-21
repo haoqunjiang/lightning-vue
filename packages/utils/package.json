@@ -8,15 +8,15 @@
     "selectors",
     "vue"
   ],
-  "homepage": "https://github.com/lightning-vue/lightning-vue/tree/main/packages/utils#readme",
+  "homepage": "https://github.com/haoqunjiang/lightning-vue/tree/main/packages/utils#readme",
   "bugs": {
-    "url": "https://github.com/lightning-vue/lightning-vue/issues"
+    "url": "https://github.com/haoqunjiang/lightning-vue/issues"
   },
   "license": "MIT",
   "author": "Haoqun Jiang <npm@haoqun.me>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lightning-vue/lightning-vue.git",
+    "url": "git+https://github.com/haoqunjiang/lightning-vue.git",
     "directory": "packages/utils"
   },
   "files": [
