@@ -1,6 +1,6 @@
 ---
 name: scoped-selector-loop
-description: Use when working on scoped selector maintainability or performance in lightning-vue, especially under packages/compiler/src/style/lightningcss/scoped, related nesting/source-pipeline code, or the scoped selector harness. Enforces the iteration loop: preserve baseline suites, run the scoped correctness checks after each meaningful change, use the median benchmark compare instead of one-off ratio lines, and update ARCHITECTURE.md after structural refactors.
+description: Use when working on scoped selector maintainability or performance in lightning-vue, especially under packages/compiler/src/style/lightningcss/scoped, related nesting/source-pipeline code, or the scoped selector harness. This is the scoped-selector-specific overlay on top of the repo-wide improvement loop.
 ---
 
 # Scoped Selector Loop
@@ -9,39 +9,40 @@ Use this skill when changing the scoped-style pipeline, especially:
 
 - `packages/compiler/src/style/lightningcss/scoped/**`
 - `packages/compiler/src/style/lightningcss/nesting/**`
-- `packages/compiler/src/stylePipeline.ts`
+- `packages/compiler/src/styleCompile/**`
 - `packages/compiler/__tests__/scopedSelector*`
 - `packages/compiler/ARCHITECTURE.md`
 
-## Non-negotiables
+Start by following:
 
-- Do not modify existing baseline tests or baseline benches just to make iteration easier.
-- Add supplemental tests, traces, or benches instead.
-- Do not trust a single Vitest `x faster` summary line.
-- After any structural refactor, update `packages/compiler/ARCHITECTURE.md`.
-- If the design cannot be explained clearly and concisely in `ARCHITECTURE.md`, keep refining it.
+- `.codex/skills/codebase-improvement-loop/SKILL.md`
+
+This skill only adds the scoped-selector-specific triggers, commands, metrics,
+and architecture prompts.
 
 ## Baseline
 
-Before performance work, make sure a saved compare baseline exists:
+Before scoped-selector performance work, make sure a saved compare baseline
+exists:
 
 ```bash
 node tools/bench-scoped-selector.mjs --runs 3 --out /tmp/lightning-vue-before.json --focus 'scoped selector|vue selector functions|nested selectors'
 ```
 
-Do not overwrite that file casually in the middle of the same optimization session. It is the comparison anchor.
+Do not overwrite that file casually in the middle of the same optimization
+session. It is the scoped-selector comparison anchor.
 
 ## Iteration Loop
 
-After each meaningful code change:
+Use this scoped correctness loop after each meaningful change:
 
 ```bash
 pnpm --filter @lightning-vue/compiler check
-pnpm --filter @lightning-vue/compiler test -- __tests__/compileStyle.spec.ts __tests__/nestedNormalization.spec.ts __tests__/scopedSelector.trace.spec.ts
+pnpm --filter @lightning-vue/compiler test -- __tests__/compileStyle.spec.ts __tests__/nestedNormalization.spec.ts __tests__/nestingNormalization.trace.spec.ts __tests__/scopedSelector.trace.spec.ts __tests__/styleCompile.trace.spec.ts
 git diff --check
 ```
 
-If the change can affect performance, also run:
+If the change can affect scoped-selector performance, also run:
 
 ```bash
 node tools/bench-scoped-selector.mjs --runs 3 --compare /tmp/lightning-vue-before.json --focus 'scoped selector|vue selector functions|nested selectors'
@@ -67,16 +68,21 @@ Interpretation rules:
 - Use the microbenches to locate cost, not to declare success.
 - If results are mixed, keep digging until you can explain the tradeoff.
 
-## Maintainability Loop
+## Explainability Loop
 
-When you change the design, force yourself to explain it plainly in `packages/compiler/ARCHITECTURE.md`.
+When you change the scoped selector design, force yourself to explain it plainly
+in `packages/compiler/ARCHITECTURE.md`.
 
 The explanation should answer:
 
 - what the phase boundaries are
 - what state crosses each boundary
+- where planning ends and application begins
 - why the expensive path is isolated
 - why the common path stays cheap
+- how the trace harness makes those boundaries observable
+- whether the trace logic should live in a reusable debug surface instead of
+  only inside `__tests__`
 
 Warning signs:
 
@@ -89,12 +95,10 @@ If one of those is true, keep refactoring.
 
 ## Stop Criteria
 
-Do not stop unless all of these are true:
+In addition to the repo-wide stop criteria, do not stop unless all of these are
+true:
 
 - the scoped correctness loop is green
 - `git diff --check` is green
 - the median compare is better or neutral on the target path you changed
 - `ARCHITECTURE.md` matches the current design after major refactors
-
-For maintainability-focused refactors, performance must be at least neutral.
-For performance-focused refactors, correctness and explainability must stay intact.
