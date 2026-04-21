@@ -285,6 +285,17 @@ That state is the handoff between expansion and placement.
 It exists for a simple reason: placement should not have to rediscover the same
 facts from raw selector syntax on every pass.
 
+Bare nested selectors still need one small classification step when placement
+recurses into selector containers. That classification is intentionally unified:
+one helper answers both of these questions at once:
+
+- does this selector need structural splitting before anchor selection?
+- does this selector contain nested scope containers that must be revisited
+  after outer placement?
+
+Keeping that as one contract avoids asking separate helpers for separate facts
+about the same selector.
+
 #### 2. Placement
 
 Once a selector is in the expanded form, the compiler can decide where to
@@ -340,6 +351,9 @@ The two ideas to keep in mind are:
 
 - `placementKind` answers:
   does this selector structure need to split before we choose an anchor?
+- selector placement classification answers:
+  what does placement need to know about a bare nested selector before it can
+  recurse into it?
 - nested scope context answers:
   are we still on the local side, or already after `:deep(...)`, inside
   `:slotted(...)`, or fully unscoped?

@@ -3,6 +3,7 @@ import { extend } from "@vue/shared";
 import { cloneAttribute, cloneCombinator, isDeepMarker } from "../../context";
 import { isScopeContainer, isSelectorContainer } from "../direct";
 import type {
+  SelectorPlacementClassification,
   ScopePlacementKind,
   ScopeContainerSelector,
   ScopedSelectorHelpers,
@@ -94,29 +95,42 @@ function normalizeNestedBranches(
   helpers: ScopedSelectorHelpers,
 ): Selector[] {
   return selectors.flatMap((nestedSelector) =>
-    getSelectorPlacementKind(nestedSelector) === "normalized"
+    classifySelectorForPlacement(nestedSelector).placementKind === "normalized"
       ? normalizeSelectorForPlacement(nestedSelector, helpers)
       : [nestedSelector],
   );
 }
 
-export function getSelectorPlacementKind(selector: Selector): ScopePlacementKind {
+export function classifySelectorForPlacement(selector: Selector): SelectorPlacementClassification {
+  let needsNestedScopeRewrite = false;
+  let placementKind: ScopePlacementKind = "direct";
+
   for (const component of selector) {
     if (!isScopeContainer(component)) {
       continue;
     }
 
+    needsNestedScopeRewrite = true;
     for (const nestedSelector of component.selectors) {
+      const nestedClassification = classifySelectorForPlacement(nestedSelector);
       if (
-        getSelectorPlacementKind(nestedSelector) === "normalized" ||
+        nestedClassification.placementKind === "normalized" ||
         startsWithDeepBoundary(nestedSelector)
       ) {
-        return "normalized";
+        placementKind = "normalized";
+        break;
       }
+    }
+
+    if (placementKind === "normalized") {
+      break;
     }
   }
 
-  return "direct";
+  return {
+    needsNestedScopeRewrite,
+    placementKind,
+  };
 }
 
 function buildDescendantScopeContainerSelector(

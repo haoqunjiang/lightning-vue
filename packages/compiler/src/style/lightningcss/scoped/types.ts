@@ -32,6 +32,11 @@ export interface ScopedStyleTransformContext {
   id: string;
 }
 
+export interface SelectorPlacementClassification {
+  needsNestedScopeRewrite: boolean;
+  placementKind: ScopePlacementKind;
+}
+
 export interface ExpandedScopedSelector {
   deep: boolean;
   needsNestedScopeRewrite: boolean;

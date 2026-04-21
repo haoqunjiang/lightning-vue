@@ -107,10 +107,6 @@ export function getNestedScopeContext(injectMode: ScopeInjectMode): NestedScopeC
   return "local";
 }
 
-export function selectorNeedsNestedScopeRewrite(selector: Selector): boolean {
-  return selector.some(isScopeContainer);
-}
-
 function hasNoInjectMarker(selector: Selector): boolean {
   return selector.some(isNoInjectMarker);
 }
