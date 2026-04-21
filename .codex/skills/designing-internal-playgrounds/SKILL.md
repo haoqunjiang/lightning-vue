@@ -1,6 +1,6 @@
 ---
 name: designing-internal-playgrounds
-description: "Designs or refines internal playgrounds, debug UIs, trace viewers, and inspector panels in lightning-vue. Use when a tool needs clearer primary paths, contextual controls, readable code surfaces, and a clean split between documentation views and live editing."
+description: "Designs or refines internal playgrounds, debug UIs, trace viewers, and inspector panels in lightning-vue. Use when a tool needs a clearer primary path, better reference-vs-editing separation, more readable code surfaces, and calmer technical-doc style UI."
 ---
 
 # Designing Internal Playgrounds
@@ -17,243 +17,192 @@ Start by following:
 
 - `.codex/skills/improving-codebase/SKILL.md`
 
-This skill adds the UX-specific design rules that came out of redesigning the
-IR playground.
+This skill adds the UX rules that held up after repeated redesign passes on the
+IR playground and divergence playground.
 
 ## Core Principles
+
+### Default to a docs-like tool, not a product page
+
+Most internal playgrounds in this repo should feel closer to technical
+documentation than to a marketing site.
+
+That usually means:
+
+- a short hero
+- calm platform typography
+- restrained surfaces
+- flatter section framing
+- readable code width
+- clear visual semantics
+
+Do not add decorative gradients, oversized shells, or display typography unless
+the page truly benefits from them.
+
+### Keep reference and editing distinct
+
+If a page is both:
+
+- visual documentation
+- and an editable tool
+
+keep those roles separate.
+
+Preferred structure:
+
+- a reference gallery or case library
+- a distinct live playground below or beside it
+
+The user should always know whether they are:
+
+- reading a documented example
+- or editing a draft
+
+Do not blur those roles into one ambiguous card grid.
 
 ### Let context explain controls
 
 Do not front-load controls, copy, or mode switches.
 
-Controls should appear where their purpose is already obvious from the nearby
-panel, result, or interaction. If a user has to read a general explanation to
-understand a control, the control is in the wrong place.
-
-Examples:
-
-- Prefer a small `Type your own` action inside a selector panel over a global
-  `Manual selector` checkbox.
-- Prefer stage-local view switches over global tabs when the meaning of the
-  switch depends on that stage.
-
-### Progressive disclosure is not only hidden panels
-
-Scrolling is also disclosure.
-
-Do not collapse secondary sections by default if simply being lower on the page
-already makes them secondary. Use `<details>` or other hiding mechanisms only
-when they reduce real noise.
-
-Examples:
-
-- A primary walkthrough can live above always-open labs.
-- Marker explanations can live in a local disclosure block because they are
-  only needed while reading that panel.
-
-### Keep documentation and live editing distinct
-
-If a page serves both as:
-
-- visual documentation
-- and an editable playground
-
-do not blur those roles into one ambiguous surface.
-
-Use a clear split:
-
-- a gallery or reference section for static cases
-- a playground section for live editing
-
-Bridge them with a deliberate action such as `Open in playground` or
-`Load this case`, instead of making every reference card silently editable.
-
-The reader should always know whether they are:
-
-- looking at a documented reference
-- or changing a live draft
-
-Also:
-
-- do not duplicate the same entry action in multiple places
-- if the gallery is the documented way to start from a case, let the gallery
-  own that action instead of adding a second, worse case-picker inside the
-  playground
-- if a whole card exists for one action, make the card itself visibly clickable
-  instead of pairing a passive card with a tiny secondary button
-- if a case type matters semantically, let that state reach the whole surface,
-  not just a badge or chip
-
-### Name things from the reader's point of view
-
-Avoid labels that leak implementation vocabulary before the reader has the
-context to care.
+Controls should appear where their purpose is obvious from the nearby panel or
+result. If the user has to read a general explanation to understand a control,
+the control is in the wrong place.
 
 Prefer:
 
-- `Normalization`
-- `Compiled output`
-- `Selector inspector`
-- `Trace`
-- `Result`
+- a local action inside the relevant panel
+- a card-level entry action for reference examples
+- one obvious start path instead of duplicated pickers
 
-Avoid labels like:
+### Important states must affect the whole surface
 
-- `Prepared CSS`
-- `Carrier notes`
-- `Open a stage`
-- `From source`
+If a case type changes how the user should read an item, that state should
+shape the whole card or panel, not only a badge.
 
-unless the surrounding panel already makes those phrases obviously meaningful.
+Use:
+
+- surface tint
+- border tone
+- small chip or label support
+
+Do not hide important meaning in a tiny badge while the rest of the surface
+looks neutral.
+
+Neutral states should stay visually quiet. Agreement or baseline states should
+not steal emphasis from wins, bugs, or limits.
 
 ### Layout follows content shape
 
-Do not force visual symmetry on asymmetric content.
+Do not force symmetry on content that wants different proportions.
 
 Rules:
 
-- short editable sources should stay short
-- static reference snippets should stay only as tall as their actual line count
-- traces want width more than height
-- code comparison panes need enough width to show selector structure
-- result panes should prefer stable height plus scrolling over page jumpiness
-- text-heavy panels should not be squeezed into decorative side-by-side grids
+- trace-like text wants width
+- code comparisons want width and stable height
+- short editable inputs should stay short
+- reference snippets should be only as tall as their content needs
+- result panes should usually scroll internally instead of stretching the page
 
-If one pane is code-like and another is long-form trace text, they do not need
-the same proportions.
+If code is hard to scan, width is usually the first thing to fix.
 
-Also:
+### Typography should stay utilitarian
 
-- do not make hero copy artificially narrow in a utilitarian tool
-- do not make code cards tall just to make the grid look balanced
-- if code is hard to scan, width usually matters more than symmetry
-- if the main interaction is "choose a reference and inspect the result",
-  gallery cards should optimize for scan width and immediate click affordance
+Prefer the platform UI stack first.
 
-### Typography should fit the tool
+For internal docs-like tools:
 
-Default to clean, utilitarian type choices for engineering tools.
+- body copy around `14px` is usually the right default
+- one lead line can step up to `16px`
+- headings can be stronger, but most labels should stay restrained
+- add `-webkit-font-smoothing: antialiased;` at the page baseline
 
-Do not reach for decorative serif display faces unless they truly help the
-page. A trace viewer, compiler playground, or comparison tool usually reads
-better with one disciplined sans family and clear weight changes.
+Do not make every paragraph feel like hero copy. Do not let chips, buttons,
+labels, and headings all compete with the same emphasis weight.
 
-Prefer the platform UI stack first. It is usually the least distracting choice
-for this kind of surface.
+If typography calls attention to itself, it is probably doing too much.
 
-If typography starts calling attention to itself, it is probably doing too much
-for this kind of UI.
+### Geometry should match the information density
 
-Reserve stronger weight for a few anchors only:
+A restrained palette does not pair well with oversized soft geometry.
 
-- the main page title
-- section titles
-- one key label inside a panel when needed
+For technical playgrounds:
 
-If chips, buttons, labels, headings, and card titles are all bold, nothing is.
+- keep corner radii moderate
+- prefer flatter section framing
+- avoid wrapping every section in a giant rounded shell
+- use tint and border before reaching for large shadows
 
-### Contrast is part of clarity
+If the UI feels soft or toy-like, the problem is often geometry rather than
+color.
 
-Internal tools do not need loud marketing colors, but they do need enough tonal
-separation to make different roles legible.
+### Copy should sound like interface, not narration
 
-If the page has:
+Write labels and context lines from the reader's point of view.
 
-- reference vs editable areas
-- match vs divergence states
-- primary vs secondary panels
+Avoid:
 
-those distinctions should show up in color and surface treatment, not only in
-labels.
+- filler like `this is`, `here you can`, `use this to`
+- implementation vocabulary before the reader has context
+- thesis-style notes that repeat the same argument case after case
 
-If a state changes how the user reads the item, it should usually affect the
-whole panel or card, not only a badge.
+Prefer:
 
-Subtlety is good only until it starts hiding the structure.
-
-### Hierarchy should come from structure, not decoration
-
-Do not try to make the UI "clear" with:
-
-- too many pills
-- heavy shadows
-- random bolding
-- lots of uppercase labels
-- repeated explainer blocks
-
-Instead use:
-
-- calmer spacing
-- fewer control styles
-- consistent panel rhythm
-- restrained typography
-- local context lines instead of giant guide sections
+- short section titles
+- one concise context line
+- notes that say what the example demonstrates
 
 ## Workflow
 
-### 1. Find the primary path
+### 1. Identify the page's actual role
 
-Before editing anything, identify:
+Before editing, decide whether the page is primarily:
 
-- the main thing the user is trying to inspect
-- the minimum path from input to answer
-- which panels are primary
-- which panels are labs or optional deep dives
-- whether the page is also serving as visual documentation
+- a reference surface
+- an editor
+- a trace viewer
+- or a combination
 
-If the page is both documentation and a tool, identify both paths explicitly:
+If it serves more than one role, define the primary path first and make the
+other roles clearly secondary.
 
-- how someone reads the references
-- how someone starts experimenting
+### 2. Fix structure before polishing copy
 
-The page should have one obvious primary path.
+First solve:
 
-### 2. Push controls down to where they matter
+- where the user starts
+- how they move from reference to experiment
+- where outputs appear
+- which controls are truly primary
 
-For every control, ask:
+Only then tighten copy and styling.
 
-- what nearby output does this affect?
-- can the user understand that from placement alone?
-- does this need to be visible before the user reaches that part of the page?
-
-If not, move it down or hide it behind a lighter action.
-
-### 3. Rewrite copy after the layout is right
-
-Do not polish copy before the structure is settled.
-
-When rewriting copy:
-
-- cut phrases like `this is`, `here you can`, `use this to`
-- let headings and placement do part of the explanatory work
-- prefer short context lines over dense guide blocks
-- explain implementation-specific markers only next to the panel that shows
-  them
-
-### 4. Review for over-design
+### 3. Review for common failure modes
 
 Check for:
 
-- too many button groups
-- more than one kind of "special" emphasis competing at once
-- secondary sections louder than the main path
-- controls that appear before the user has reason to care about them
-- card heights that jump badly between examples
+- hero sections carrying too much explanatory load
+- duplicated entry actions
+- controls appearing before the user has reason to care
+- code panes that are too narrow
+- cards that are too tall or too soft
+- too little breathing room at the page edges
+- states visible only through badges
+- too much bold text
 
 If any of those are true, simplify again.
 
-### 5. Review for blurred roles
+### 4. Only codify lessons after they survive critique
 
-Check for:
+Do not update this skill after every small styling tweak.
 
-- reference examples that look editable even though they are meant as docs
-- a live editor that feels like just another reference card
-- a gallery that is too sparse to be useful as documentation
-- two different controls that both try to answer "how do I start from a case?"
-- code panes that are readable only after horizontal or vertical fighting
-- section colors so subtle that gallery/playground states blur together
+Only record a lesson when it clearly generalizes and survives a few rounds of
+real feedback. Avoid turning one temporary direction into a rule too early.
 
-If any of those are true, the page structure is still doing too little work.
+When updating the skill:
+
+- capture the stable principle, not the transient patch
+- prefer one strong rule over several eager micro-rules
+- remove or rewrite rules that no longer match the best design
 
 ## Validation Loop
 
@@ -265,24 +214,22 @@ pnpm --filter ir-playground build
 git diff --check
 ```
 
-If the touched app is not `ir-playground`, run the equivalent narrow check/build
-commands for that app instead.
+If the touched app is not `ir-playground`, run the equivalent narrow
+check/build commands for that app instead.
 
-Treat dependency-originated warnings separately from UX regressions. Do not
-paper over packaging problems with runtime hacks when the real boundary is in
-the build or import graph.
+Treat dependency-originated warnings separately from UX regressions.
 
 ## Stop Criteria
 
 Do not stop until all of these are true:
 
-- the main path is obvious without reading a long guide block
-- documentation vs playground roles are visually and behaviorally distinct
-- secondary tools feel secondary
-- manual/advanced controls are revealed by context instead of imposed upfront
-- trace-heavy panels are readable at a glance
-- code snippets are sized for their real line count and width
-- the page no longer jumps badly when examples change
-- check/build/diff are green
+- the main path is obvious without a long guide block
+- reference and editing roles are distinct
+- important states are visible at surface level
+- code and trace panes are readable without fighting the layout
+- the page feels like a technical tool, not a softened product mockup
+- typography is calm and appropriately scaled
+- the outer page gutters feel intentional
+- checks/build/diff are green
 
-If the page still needs chat explanation to make sense, keep redesigning.
+If the page still needs chat explanation to feel coherent, keep redesigning.

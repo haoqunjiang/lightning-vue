@@ -117,9 +117,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .editor-root {
   min-height: var(--editor-min-height);
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(196, 205, 227, 0.95);
-  background: white;
+  border: 1px solid var(--lv-border-soft);
+  background: var(--lv-surface-base);
 }
 </style>

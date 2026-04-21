@@ -9,7 +9,7 @@ import ReferenceCaseCard from "./components/ReferenceCaseCard.vue";
 
 type CaseKind =
   | "likely-lightning-bug"
-  | "likely-postcss-bug"
+  | "correctness-win"
   | "needs-review"
   | "lightning-limit"
   | "shared-limit"
@@ -22,13 +22,14 @@ const CASE_GROUPS: Array<{
 }> = [
   {
     kind: "likely-lightning-bug",
-    label: "Likely Lightning issues",
-    summary: "Selectors that still look wrong on the Lightning path.",
+    label: "Likely compiler bugs",
+    summary: "Selectors that still look wrong on the lightning-vue compiler path.",
   },
   {
-    kind: "likely-postcss-bug",
-    label: "Likely Vue compiler issues",
-    summary: "Cases where the older PostCSS path seems to be the odd one out.",
+    kind: "correctness-win",
+    label: "Correctness wins",
+    summary:
+      "Cases where the lightning-vue compiler spends extra work to keep scoped semantics intact.",
   },
   {
     kind: "needs-review",
@@ -37,8 +38,8 @@ const CASE_GROUPS: Array<{
   },
   {
     kind: "lightning-limit",
-    label: "Known Lightning limits",
-    summary: "Gaps we are intentionally carrying for now.",
+    label: "Known compiler limits",
+    summary: "Deliberate tradeoffs and edges we still carry for now.",
   },
   {
     kind: "shared-limit",
@@ -162,14 +163,14 @@ watch(
   <main class="page">
     <header class="hero">
       <h1>Scoped CSS divergence</h1>
-      <p class="lede">Read the documented cases, then open one in the playground below.</p>
+      <p class="lede">A visual index of the main drifts, limits, and correctness wins.</p>
     </header>
 
     <section class="gallery-shell">
       <header class="section-head">
         <div class="section-copy">
           <h2>Gallery</h2>
-          <p>Documented cases. Click a card to load that source into the playground.</p>
+          <p>Representative cases from the README and regression suite. Open any card below.</p>
         </div>
       </header>
 
@@ -249,7 +250,7 @@ watch(
             :error="comparison.postcss.hasError"
           />
           <CodePane
-            title="Lightning compiler"
+            title="@lightning-vue/compiler"
             :code="comparison.lightning.code"
             :error="comparison.lightning.hasError"
           />
@@ -265,13 +266,62 @@ watch(
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono:
     ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --lv-bg-canvas: oklch(0.982 0.005 210);
+  --lv-surface-base: oklch(0.994 0.003 180);
+  --lv-surface-raised: oklch(0.99 0.004 190);
+  --lv-surface-playground: oklch(0.992 0.007 198);
+  --lv-surface-code: oklch(0.982 0.005 230);
+  --lv-border-soft: oklch(0.89 0.012 245 / 0.88);
+  --lv-border-strong: oklch(0.83 0.02 242 / 0.96);
+  --lv-text-strong: oklch(0.28 0.03 252);
+  --lv-text-body: oklch(0.44 0.022 249);
+  --lv-text-soft: oklch(0.56 0.018 246);
+  --lv-interactive: oklch(0.58 0.14 240);
+  --lv-interactive-soft: oklch(0.95 0.03 238);
+  --lv-win-border: oklch(0.78 0.12 161 / 0.95);
+  --lv-win-surface-top: oklch(0.985 0.03 160);
+  --lv-win-surface-bottom: oklch(0.977 0.02 164);
+  --lv-win-chip-bg: oklch(0.93 0.05 160);
+  --lv-win-chip-text: oklch(0.46 0.11 162);
+  --lv-bug-border: oklch(0.73 0.13 42 / 0.92);
+  --lv-bug-surface-top: oklch(0.98 0.026 42);
+  --lv-bug-surface-bottom: oklch(0.974 0.018 40);
+  --lv-bug-chip-bg: oklch(0.935 0.04 42);
+  --lv-bug-chip-text: oklch(0.53 0.13 40);
+  --lv-review-border: oklch(0.82 0.11 86 / 0.92);
+  --lv-review-surface-top: oklch(0.986 0.025 90);
+  --lv-review-surface-bottom: oklch(0.98 0.018 92);
+  --lv-review-chip-bg: oklch(0.95 0.038 90);
+  --lv-review-chip-text: oklch(0.54 0.11 86);
+  --lv-limit-border: oklch(0.84 0.04 78 / 0.92);
+  --lv-limit-surface-top: oklch(0.987 0.015 80);
+  --lv-limit-surface-bottom: oklch(0.981 0.012 82);
+  --lv-limit-chip-bg: oklch(0.95 0.02 80);
+  --lv-limit-chip-text: oklch(0.47 0.06 72);
+  --lv-agreement-border: var(--lv-border-soft);
+  --lv-agreement-surface-top: var(--lv-surface-base);
+  --lv-agreement-surface-bottom: oklch(0.992 0.004 200);
+  --lv-agreement-chip-bg: oklch(0.95 0.008 240);
+  --lv-agreement-chip-text: oklch(0.52 0.016 244);
+  --lv-shadow-soft: 0 1px 1px oklch(0.27 0.02 252 / 0.04), 0 10px 22px oklch(0.27 0.02 252 / 0.03);
+  --lv-shadow-strong:
+    0 1px 1px oklch(0.27 0.02 252 / 0.05), 0 14px 28px oklch(0.27 0.02 252 / 0.05);
   font-family: var(--font-sans);
-  background: #edf2f8;
+  background: linear-gradient(
+    180deg,
+    oklch(0.987 0.01 165),
+    oklch(0.984 0.007 188) 14rem,
+    var(--lv-bg-canvas) 28rem
+  );
 }
 
 body {
   margin: 0;
-  color: #162238;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--lv-text-strong);
   background: transparent;
 }
 
@@ -289,16 +339,16 @@ select {
 }
 
 .page {
-  width: min(1480px, calc(100% - 2rem));
+  width: min(1440px, calc(100% - clamp(3rem, 4vw, 5rem)));
   margin: 0 auto;
-  padding: 1.75rem 0 3.2rem;
+  padding: 1.5rem 0 3.2rem;
 }
 
 .hero {
   display: grid;
   gap: 0.5rem;
-  margin-bottom: 2.2rem;
-  padding: 0.2rem 0 0.25rem;
+  margin-bottom: 1.85rem;
+  padding: 0.15rem 0 0.1rem;
 }
 
 .hero h1,
@@ -308,7 +358,7 @@ select {
   margin: 0;
   font-family: var(--font-sans);
   letter-spacing: -0.028em;
-  color: #13213a;
+  color: var(--lv-text-strong);
   font-weight: 600;
 }
 
@@ -321,32 +371,28 @@ select {
 .lede {
   max-width: 62ch;
   margin: 0;
-  color: #50607a;
-  font-size: 1.04rem;
-  line-height: 1.58;
+  color: var(--lv-text-body);
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 .section-copy p,
 .group-head p,
 .panel-head p {
   margin: 0;
-  color: #5b6983;
-  line-height: 1.5;
+  color: var(--lv-text-body);
+  font-size: 0.93rem;
+  line-height: 1.48;
 }
 
 .gallery-shell,
 .playground-shell {
   display: grid;
-  gap: 1.1rem;
+  gap: 0.95rem;
 }
 
 .gallery-shell {
-  margin-bottom: 2.4rem;
-  padding: 1.25rem;
-  border-radius: 28px;
-  border: 1px solid rgba(211, 218, 231, 0.9);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 42px rgba(31, 48, 79, 0.045);
+  margin-bottom: 2.6rem;
 }
 
 .section-head {
@@ -354,6 +400,8 @@ select {
   justify-content: space-between;
   align-items: start;
   gap: 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--lv-border-soft);
 }
 
 .section-copy {
@@ -367,12 +415,12 @@ select {
 
 .gallery-groups {
   display: grid;
-  gap: 1.2rem;
+  gap: 1.5rem;
 }
 
 .group {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.9rem;
 }
 
 .group-head {
@@ -391,11 +439,7 @@ select {
 }
 
 .playground-shell {
-  padding: 1.25rem;
-  border-radius: 28px;
-  border: 1px solid rgba(192, 205, 228, 0.95);
-  background: linear-gradient(180deg, rgba(245, 249, 255, 0.98), rgba(239, 245, 252, 0.96));
-  box-shadow: 0 24px 54px rgba(37, 59, 97, 0.07);
+  gap: 1rem;
 }
 
 .playground-card,
@@ -403,9 +447,10 @@ select {
   display: grid;
   gap: 0.95rem;
   padding: 1.05rem;
-  border-radius: 22px;
-  border: 1px solid rgba(197, 207, 226, 0.92);
-  background: rgba(255, 255, 255, 0.96);
+  border-radius: 16px;
+  border: 1px solid var(--lv-border-soft);
+  background: var(--lv-surface-playground);
+  box-shadow: var(--lv-shadow-soft);
 }
 
 .panel-head {
@@ -435,40 +480,40 @@ select {
   align-items: center;
   padding: 0.32rem 0.62rem;
   border-radius: 999px;
-  background: rgba(101, 118, 149, 0.1);
-  color: #53627b;
+  background: var(--lv-agreement-chip-bg);
+  color: var(--lv-agreement-chip-text);
   font-size: 0.78rem;
   font-weight: 500;
 }
 
 .source-chip.accent {
-  background: rgba(56, 105, 181, 0.12);
-  color: #24539a;
+  background: var(--lv-interactive-soft);
+  color: var(--lv-interactive);
 }
 
 .subtle-button {
   flex: none;
   padding: 0.62rem 0.86rem;
   border-radius: 999px;
-  border: 1px solid rgba(185, 197, 220, 0.98);
-  background: rgba(250, 252, 255, 0.96);
-  color: #1f3152;
+  border: 1px solid var(--lv-border-soft);
+  background: var(--lv-surface-base);
+  color: var(--lv-interactive);
   cursor: pointer;
   font-weight: 500;
 }
 
 .subtle-button:hover {
-  background: white;
+  background: oklch(0.997 0.003 190);
 }
 
 .results-card.same {
-  border-color: rgba(18, 150, 136, 0.28);
-  background: rgba(244, 252, 250, 0.98);
+  border-color: var(--lv-win-border);
+  background: oklch(0.99 0.013 164);
 }
 
 .results-card.different {
-  border-color: rgba(186, 103, 41, 0.32);
-  background: rgba(255, 249, 242, 0.98);
+  border-color: var(--lv-bug-border);
+  background: oklch(0.989 0.014 42);
 }
 
 .result-pill {
@@ -479,18 +524,18 @@ select {
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 500;
-  color: #56657d;
-  background: rgba(183, 194, 211, 0.26);
+  color: var(--lv-agreement-chip-text);
+  background: var(--lv-agreement-chip-bg);
 }
 
 .result-pill.same {
-  color: #0f766e;
-  background: rgba(13, 148, 136, 0.16);
+  color: var(--lv-win-chip-text);
+  background: var(--lv-win-chip-bg);
 }
 
 .result-pill.different {
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.18);
+  color: var(--lv-bug-chip-text);
+  background: var(--lv-bug-chip-bg);
 }
 
 .output-grid {
@@ -508,7 +553,7 @@ select {
 
 @media (max-width: 900px) {
   .page {
-    width: min(100%, calc(100% - 1rem));
+    width: min(100%, calc(100% - 2rem));
   }
 
   .section-head,

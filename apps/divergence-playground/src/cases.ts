@@ -4,7 +4,7 @@ export interface DivergenceCase {
   note: string;
   kind:
     | "likely-lightning-bug"
-    | "likely-postcss-bug"
+    | "correctness-win"
     | "needs-review"
     | "lightning-limit"
     | "shared-limit"
@@ -15,20 +15,89 @@ export const curatedCases: DivergenceCase[] = [
   {
     title: "Descendant anchor before deep-only :is() branch",
     source: `.card :is(:deep(.title)) { color: red; }`,
-    note: "This now looks more like a PostCSS issue. Lightning lowers the nested deep branch into the same descendant shape as `.card :deep(.title)`, while PostCSS still leaves `:deep()` unresolved inside `:is()`.",
-    kind: "likely-postcss-bug",
+    note: "The lightning-vue compiler lowers the nested deep branch into the same descendant shape as `.card :deep(.title)`. The older PostCSS path still leaves `:deep()` unresolved inside `:is()`.",
+    kind: "correctness-win",
   },
   {
     title: "Descendant anchor with local prefix before deep inside :is()",
     source: `.card :is(.header :deep(.icon)) { color: red; }`,
-    note: "This also now looks more like a PostCSS issue. Lightning keeps `.card` and `.header` locally scoped while preserving the deep escape on `.icon`, whereas PostCSS still leaves `:deep()` unresolved inside `:is()`.",
-    kind: "likely-postcss-bug",
+    note: "The lightning-vue compiler keeps `.card` and `.header` locally scoped while preserving the deep escape on `.icon`. The older PostCSS path still leaves the carrier unresolved inside `:is()`.",
+    kind: "correctness-win",
   },
   {
     title: "Nested :where(:deep(...)) inside descendant-side :is()",
     source: `.card :is(:where(:deep(.title))) { color: red; }`,
-    note: "Lightning lowers the nested `:where(:deep(...))` branch into descendant semantics from `.card`, while PostCSS still preserves the unresolved carrier structure inside `:is()`.",
-    kind: "likely-postcss-bug",
+    note: "The lightning-vue compiler lowers the nested `:where(:deep(...))` branch into descendant semantics from `.card`. The older PostCSS path still preserves the unresolved carrier structure inside `:is()`.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Nested deep override under a local card",
+    source: `.card {
+  color: red;
+  :deep(.title) { color: blue; }
+}`,
+    note: "The lightning-vue compiler normalizes the nested rule first, then applies the deep escape so the local `.card` declaration and the deep descendant land on separate final rules. The older PostCSS path still leaves the nested structure in place here.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Nested global override beside a local branch",
+    source: `.card {
+  :global(.title) { color: blue; }
+  .copy { color: red; }
+}`,
+    note: "The lightning-vue compiler preserves the global override while still scoping the local nested branch after nesting normalization. The older PostCSS path keeps the nested block structure, so the final scoped behavior is less explicit.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Nested slot-scoped descendant under a slotted card",
+    source: `:slotted(.card) {
+  .title { color: red; }
+}`,
+    note: "The lightning-vue compiler keeps the nested descendant on the slot-scoped side after nesting normalization, instead of falling back to ordinary local scoping on `.title`.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Logical wrapper keeps an outer scope anchor",
+    source: `:not(.foo :deep(.bar)) { color: red; }`,
+    note: "The lightning-vue compiler keeps the outer selector locally anchored even though the inner branch crosses a deep boundary. The older PostCSS path still treats the whole wrapper like a plain outer match and leaves the carrier unresolved inside `:not(...)`.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Wildcard sibling selector stays valid",
+    source: `* + :hover { color: red; }`,
+    note: "The lightning-vue compiler preserves the valid wildcard+sibling form and scopes the hovered selector itself. The older PostCSS path still collapses the wildcard side and shifts the scope anchor.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Nested media rule keeps slot context",
+    source: `:slotted(.card) {
+  @media print {
+    .title { color: red; }
+  }
+}`,
+    note: "The lightning-vue compiler carries slot context through the nested conditional rule, so the descendant still stays on the slot-scoped side inside `@media`. The older PostCSS path re-enters ordinary local scoping inside the nested block.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Animation fallback name is rewritten inside var()",
+    source: `@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.card {
+  animation-name: var(--anim, fade);
+}`,
+    note: "The lightning-vue compiler renames the local keyframe in the `var()` fallback too, so the declaration still points at the scoped `@keyframes` name. The older PostCSS path renames the keyframe block but leaves the fallback untouched.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Mixed slotted and local branches in one nested rule",
+    source: `:slotted(.x), .y {
+  .b { color: red; }
+}`,
+    note: "This mixed list is handled conservatively. The nested `.b` stays locally scoped instead of taking different scoping behavior from each branch. Split the selector list if the branches need to behave differently.",
+    kind: "lightning-limit",
   },
   {
     title: "Carrier inside :nth-child(... of ...)",
@@ -51,7 +120,7 @@ export const curatedCases: DivergenceCase[] = [
   {
     title: "Global inside :is()",
     source: `:is(:global(.x)) { color: red; }`,
-    note: "Both compilers keep the global branch unscoped here. Lightning also simplifies the single-branch `:is(.x)` wrapper down to `.x`.",
+    note: "Both compilers keep the global branch unscoped here. The lightning-vue compiler also simplifies the single-branch `:is(.x)` wrapper down to `.x`.",
     kind: "agreement",
   },
   {
