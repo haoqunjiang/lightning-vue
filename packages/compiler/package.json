@@ -1,6 +1,6 @@
 {
   "name": "@lightning-vue/compiler",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Vue SFC compiler module with a Lightning CSS-backed style compiler",
   "keywords": [
     "compiler-sfc",
