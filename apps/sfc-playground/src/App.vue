@@ -6,6 +6,9 @@ import { computed, onMounted, ref, watch, watchEffect } from "vue";
 import { defaultSfc } from "./defaultSfc";
 import { lightningCompiler } from "./lightningCompiler";
 
+const baseUrl = new URL(import.meta.env.BASE_URL, window.location.origin);
+const resolveBaseAssetUrl = (assetPath: string) => new URL(assetPath, baseUrl).toString();
+
 const replRef = ref<InstanceType<typeof Repl>>();
 
 const setVH = () => {
@@ -21,14 +24,14 @@ const autoSave = ref<boolean>(JSON.parse(localStorage.getItem(AUTO_SAVE_STORAGE_
 
 const { productionMode, vueVersion, importMap } = useVueImportMap({
   runtimeDev: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.js`
-    : `${location.origin}/src/vue-dev-proxy`,
+    ? resolveBaseAssetUrl("vue.runtime.esm-browser.js")
+    : resolveBaseAssetUrl("src/vue-dev-proxy"),
   runtimeProd: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
-    : `${location.origin}/src/vue-dev-proxy-prod`,
+    ? resolveBaseAssetUrl("vue.runtime.esm-browser.prod.js")
+    : resolveBaseAssetUrl("src/vue-dev-proxy-prod"),
   serverRenderer: import.meta.env.PROD
-    ? `${location.origin}/server-renderer.esm-browser.js`
-    : `${location.origin}/src/vue-server-renderer-dev-proxy`,
+    ? resolveBaseAssetUrl("server-renderer.esm-browser.js")
+    : resolveBaseAssetUrl("src/vue-server-renderer-dev-proxy"),
 });
 
 let hash = location.hash.slice(1);

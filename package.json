@@ -6,6 +6,7 @@
   "scripts": {
     "ready": "vp check && vp run -r test && vp run -r build",
     "build": "vp run -r build",
+    "build:pages": "node tools/build-pages.mjs",
     "test": "vp run -r test",
     "bench": "vp run compiler#bench",
     "bench:scoped": "vp run compiler#bench:scoped",

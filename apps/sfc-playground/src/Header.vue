@@ -28,6 +28,9 @@ const emit = defineEmits([
 const { store } = props;
 
 const currentCommit = __COMMIT__;
+const baseUrl = import.meta.env.BASE_URL;
+const logoUrl = `${baseUrl}logo.svg`;
+const appBaseHref = new URL(baseUrl, window.location.origin).toString();
 
 const vueVersion = computed(() => {
   if (store.loading) {
@@ -47,8 +50,7 @@ function resetVueVersion() {
 async function copyLink(e: MouseEvent) {
   if (e.metaKey) {
     resetVueVersion();
-    // hidden logic for going to local debug from play.vuejs.org
-    window.location.href = "http://localhost:5173/" + window.location.hash;
+    window.location.href = `${appBaseHref}${window.location.hash}`;
     return;
   }
   await navigator.clipboard.writeText(location.href);
@@ -66,7 +68,7 @@ function toggleDark() {
 <template>
   <nav>
     <h1>
-      <img alt="logo" src="/logo.svg" />
+      <img alt="logo" :src="logoUrl" />
       <span>Lightning Vue SFC Playground</span>
     </h1>
     <div class="links">

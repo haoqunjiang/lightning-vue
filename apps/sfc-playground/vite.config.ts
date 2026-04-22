@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import vue from "@vitejs/plugin-vue";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
+import { resolveLightningVueAppBuild } from "../../tools/lightningVueAppBuild.ts";
 import { compiler, lightningVueCompilerAliases } from "../../tools/lightningVueCompiler.ts";
 
 const require = createRequire(import.meta.url);
@@ -16,6 +17,7 @@ const commit = spawnSync("git", ["rev-parse", "--short=7", "HEAD"], {
   .trim();
 
 export default defineConfig({
+  ...resolveLightningVueAppBuild(import.meta.url),
   resolve: {
     alias: lightningVueCompilerAliases,
   },
