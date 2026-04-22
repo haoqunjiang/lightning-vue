@@ -49,6 +49,14 @@ fs.writeFileSync(
 );
 
 function renderIndex(entries) {
+  const installCommandPnpm = `pnpm add -D @lightning-vue/compiler lightningcss @vitejs/plugin-vue`;
+  const installCommandNpm = `npm install -D @lightning-vue/compiler lightningcss @vitejs/plugin-vue`;
+  const usageExample = `import vue from "@vitejs/plugin-vue";
+import * as compiler from "@lightning-vue/compiler";
+
+export default {
+  plugins: [vue({ compiler })],
+};`;
   const cards = entries
     .map(
       (entry) => `
@@ -87,13 +95,21 @@ function renderIndex(entries) {
       main {
         width: min(1100px, calc(100% - clamp(2rem, 6vw, 6rem)));
         margin: 0 auto;
-        padding: clamp(3rem, 7vw, 6rem) 0;
+        padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(3rem, 7vw, 6rem);
       }
 
       header {
         display: grid;
         gap: 0.75rem;
         margin-bottom: 2rem;
+      }
+
+      .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
       }
 
       .eyebrow {
@@ -115,6 +131,16 @@ function renderIndex(entries) {
         font-size: 1rem;
         line-height: 1.6;
         color: oklch(0.44 0.03 240);
+      }
+
+      .header-link {
+        color: oklch(0.44 0.05 230);
+        text-decoration: none;
+        font-size: 0.92rem;
+      }
+
+      .header-link:hover {
+        color: oklch(0.34 0.06 230);
       }
 
       .grid {
@@ -159,17 +185,104 @@ function renderIndex(entries) {
         line-height: 1.55;
         color: oklch(0.43 0.025 240);
       }
+
+      .docs {
+        display: grid;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+
+      .panel {
+        display: grid;
+        gap: 0.7rem;
+        padding: 1.1rem 1.15rem;
+        background: oklch(0.993 0.002 220);
+        border: 1px solid oklch(0.91 0.01 240);
+        border-radius: 14px;
+      }
+
+      .panel h2 {
+        font-size: 1rem;
+      }
+
+      .panel p {
+        margin: 0;
+        color: oklch(0.43 0.025 240);
+        line-height: 1.55;
+      }
+
+      .install-list {
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .install-item {
+        display: grid;
+        gap: 0.4rem;
+      }
+
+      .install-label {
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: oklch(0.56 0.07 210);
+      }
+
+      pre {
+        margin: 0;
+        padding: 0.85rem 0.95rem;
+        overflow-x: auto;
+        background: oklch(0.975 0.003 235);
+        border: 1px solid oklch(0.9 0.01 240);
+        border-radius: 12px;
+        color: oklch(0.29 0.02 250);
+        font: 0.86rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      code {
+        font: inherit;
+      }
+
+      @media (max-width: 720px) {
+        main {
+          width: min(1100px, calc(100% - 1.5rem));
+        }
+      }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <span class="eyebrow">lightning-vue</span>
+        <div class="header-row">
+          <span class="eyebrow">lightning-vue</span>
+          <a class="header-link" href="https://github.com/haoqunjiang/lightning-vue">GitHub ↗</a>
+        </div>
         <h1>Playgrounds</h1>
         <p class="lede">Three focused tools for trying the compiler, comparing behavior, and inspecting the style rewrite pipeline.</p>
       </header>
       <section class="grid">
         ${cards}
+      </section>
+      <section class="docs">
+        <article class="panel">
+          <h2>Install</h2>
+          <div class="install-list">
+            <div class="install-item">
+              <span class="install-label">pnpm</span>
+              <pre><code>${installCommandPnpm}</code></pre>
+            </div>
+            <div class="install-item">
+              <span class="install-label">npm</span>
+              <pre><code>${installCommandNpm}</code></pre>
+            </div>
+          </div>
+        </article>
+        <article class="panel">
+          <h2>Use it with Vite</h2>
+          <p>Swap in <code>@lightning-vue/compiler</code> as the compiler module for <code>@vitejs/plugin-vue</code>.</p>
+          <pre><code>${usageExample}</code></pre>
+        </article>
       </section>
     </main>
   </body>
