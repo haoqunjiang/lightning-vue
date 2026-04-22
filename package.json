@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "ready": "pnpm check && vp run -r test && vp run --filter './apps/*' build",
+    "release": "bumpp",
     "build": "pnpm build:apps",
     "build:packages": "node tools/build-packages.mjs",
     "build:apps": "pnpm build:packages && vp run --filter './apps/*' build",
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitejs/plugin-vue": "^6.0.6",
+    "bumpp": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:"

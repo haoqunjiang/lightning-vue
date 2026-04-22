@@ -1,0 +1,68 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: Publish
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release versions
+        run: |
+          node <<'EOF'
+          const tag = process.env.GITHUB_REF_NAME;
+          const refType = process.env.GITHUB_REF_TYPE;
+          const utils = require("./packages/utils/package.json");
+          const compiler = require("./packages/compiler/package.json");
+
+          if (utils.version !== compiler.version) {
+            throw new Error(
+              `Package versions differ: utils=${utils.version}, compiler=${compiler.version}`,
+            );
+          }
+
+          if (refType === "tag" && tag !== `v${utils.version}`) {
+            throw new Error(
+              `Tag ${tag} does not match package version v${utils.version}`,
+            );
+          }
+          EOF
+
+      - name: Run readiness loop
+        run: pnpm ready
+
+      - name: Publish packages
+        run: pnpm -r --filter "./packages/*" publish --access public --no-git-checks
