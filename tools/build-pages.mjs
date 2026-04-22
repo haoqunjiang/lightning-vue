@@ -8,19 +8,19 @@ const outputRoot = path.resolve(repoRoot, "dist/pages");
 
 const playgrounds = [
   {
-    filter: "sfc-playground",
+    cwd: path.join(repoRoot, "apps/sfc-playground"),
     slug: "sfc",
     title: "SFC Playground",
     summary: "Interactive Vue SFC REPL powered by @lightning-vue/compiler.",
   },
   {
-    filter: "divergence-playground",
+    cwd: path.join(repoRoot, "apps/divergence-playground"),
     slug: "divergence",
     title: "Divergence Playground",
     summary: "Reference gallery and live comparison against the Vue compiler path.",
   },
   {
-    filter: "ir-playground",
+    cwd: path.join(repoRoot, "apps/ir-playground"),
     slug: "ir",
     title: "IR Playground",
     summary: "Trace nested normalization and scoped selector phases end to end.",
@@ -31,8 +31,8 @@ fs.rmSync(outputRoot, { recursive: true, force: true });
 fs.mkdirSync(outputRoot, { recursive: true });
 
 for (const playground of playgrounds) {
-  execFileSync("pnpm", ["--filter", playground.filter, "build"], {
-    cwd: repoRoot,
+  execFileSync("vp", ["build"], {
+    cwd: playground.cwd,
     env: {
       ...process.env,
       LV_APP_BASE: `/${playground.slug}/`,

@@ -65,6 +65,7 @@
   },
   "scripts": {
     "build": "vp pack",
+    "watch": "vp pack --watch",
     "test": "vp test run",
     "bench": "vp test bench __tests__/compileStyle.bench.ts",
     "bench:scoped": "vp test bench __tests__/scopedSelector.bench.ts",
