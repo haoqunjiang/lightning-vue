@@ -13,21 +13,9 @@ export interface DivergenceCase {
 
 export const curatedCases: DivergenceCase[] = [
   {
-    title: "Descendant anchor before deep-only :is() branch",
-    source: `.card :is(:deep(.title)) { color: red; }`,
-    note: "The lightning-vue compiler lowers the nested deep branch into the same descendant shape as `.card :deep(.title)`. The older PostCSS path still leaves `:deep()` unresolved inside `:is()`.",
-    kind: "correctness-win",
-  },
-  {
-    title: "Descendant anchor with local prefix before deep inside :is()",
+    title: "Descendant-side :is() keeps a local prefix scoped",
     source: `.card :is(.header :deep(.icon)) { color: red; }`,
-    note: "The lightning-vue compiler keeps `.card` and `.header` locally scoped while preserving the deep escape on `.icon`. The older PostCSS path still leaves the carrier unresolved inside `:is()`.",
-    kind: "correctness-win",
-  },
-  {
-    title: "Nested :where(:deep(...)) inside descendant-side :is()",
-    source: `.card :is(:where(:deep(.title))) { color: red; }`,
-    note: "The lightning-vue compiler lowers the nested `:where(:deep(...))` branch into descendant semantics from `.card`. The older PostCSS path still preserves the unresolved carrier structure inside `:is()`.",
+    note: "The lightning-vue compiler keeps `.header` locally scoped before the deep escape on `.icon`. The current PostCSS path now lowers the deep branch too, but it still leaves `.header` unscoped inside `:is()`.",
     kind: "correctness-win",
   },
   {
@@ -57,9 +45,15 @@ export const curatedCases: DivergenceCase[] = [
     kind: "correctness-win",
   },
   {
-    title: "Logical wrapper keeps an outer scope anchor",
+    title: "Logical wrapper keeps the outer local anchor",
     source: `:not(.foo :deep(.bar)) { color: red; }`,
-    note: "The lightning-vue compiler keeps the outer selector locally anchored even though the inner branch crosses a deep boundary. The older PostCSS path still treats the whole wrapper like a plain outer match and leaves the carrier unresolved inside `:not(...)`.",
+    note: "The lightning-vue compiler keeps the `:not(...)` wrapper itself locally anchored after lowering the inner deep branch. The current PostCSS path now lowers `.bar` too, but it still drops the outer scope anchor on the wrapper.",
+    kind: "correctness-win",
+  },
+  {
+    title: "Leading deep branch before a local descendant",
+    source: `:not(:deep(.foo)) .bar { color: red; }`,
+    note: "The lightning-vue compiler keeps `.bar` as the local target after the deep branch. The current PostCSS path now rewrites the deep branch too, but it scopes the `.foo` side instead, so the selector matches a different shape.",
     kind: "correctness-win",
   },
   {

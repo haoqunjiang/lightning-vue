@@ -15,6 +15,10 @@ describe("compileStyleWithLightningCss", () => {
       .trim();
   }
 
+  function normalizeComparisonCss(code: string) {
+    return normalizeCssOutput(code).replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
+  }
+
   function flattenCss(code: string) {
     return new TextDecoder().decode(
       transform({
@@ -744,6 +748,54 @@ describe("compileStyleWithLightningCss", () => {
 
     expect(result.errors).toHaveLength(0);
     expect(normalizeCssOutput(result.code)).toBe(expected);
+  });
+
+  test.each([
+    [
+      "descendant-side deep-only :is() now lowers the nested deep branch",
+      `.card :is(:deep(.title)) { color: red; }`,
+      ".card[data-v-test] :is(.title) { color: red; }",
+      ".card[data-v-test] .title { color: red; }",
+    ],
+    [
+      "descendant-side deep inside :is() still leaves local prefixes unscoped in the current PostCSS path",
+      `.card :is(.header :deep(.icon)) { color: red; }`,
+      ".card[data-v-test] :is(.header .icon) { color: red; }",
+      ".card[data-v-test] :is(.header[data-v-test] .icon) { color: red; }",
+    ],
+    [
+      "descendant-side :is(:where(:deep(...))) still differs after the carrier is lowered",
+      `.card :is(:where(:deep(.title))) { color: red; }`,
+      ".card[data-v-test] :is(:where(.title)) { color: red; }",
+      ".card[data-v-test] :where(.title) { color: red; }",
+    ],
+    [
+      "logical wrappers now lower the inner deep branch but still miss the outer local anchor",
+      `:not(.foo :deep(.bar)) { color: red; }`,
+      ":not(.foo[data-v-test] .bar) { color: red; }",
+      ":not(.foo[data-v-test] .bar)[data-v-test] { color: red; }",
+    ],
+    [
+      "leading deep branches inside logical wrappers now rewrite but still scope a different side",
+      `:not(:deep(.foo)) .bar { color: red; }`,
+      ":not([data-v-test] .foo) .bar { color: red; }",
+      ":not(.foo) .bar[data-v-test] { color: red; }",
+    ],
+  ])("%s", (_label, source, postcssExpected, lightningExpected) => {
+    const options = {
+      source,
+      filename: "test.css",
+      id: "data-v-test",
+      scoped: true,
+    };
+
+    const postcssResult = compileStyleWithPostcss(options);
+    const lightningResult = compileStyleWithLightningCss(options);
+
+    expect(postcssResult.errors).toHaveLength(0);
+    expect(lightningResult.errors).toHaveLength(0);
+    expect(normalizeComparisonCss(postcssResult.code)).toBe(postcssExpected);
+    expect(normalizeComparisonCss(lightningResult.code)).toBe(lightningExpected);
   });
 
   test.each([

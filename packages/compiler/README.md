@@ -89,9 +89,9 @@ For concrete examples and side-by-side outputs, see the divergence playground:
 - **Wildcard selectors stay valid**
   - `@lightning-vue/compiler`: Keeps valid selectors such as `* + :hover` and `svg\|*` valid after scoping.
   - Current PostCSS path: Still breaks some wildcard forms.
-- **Logical wrappers keep the outer selector local**
-  - `@lightning-vue/compiler`: Keeps selectors like `:not(.foo :deep(.bar))` and `:has(.foo :deep(.bar))` tied to the component. The part outside `:deep(...)` is still scoped locally.
-  - Current PostCSS path: Still leaves `:deep(...)` unresolved inside those logical wrappers, so the final selector does not lower to the same locally anchored shape.
+- **Logical wrappers keep the outer local anchor**
+  - `@lightning-vue/compiler`: For selectors like `:not(.foo :deep(.bar))` and `:has(.foo :deep(.bar))`, lowers the deep branch and still keeps the wrapper itself locally anchored.
+  - Current PostCSS path: Now lowers the inner deep branch too, but it can still drop the outer `[data-v-*]` anchor on the wrapper, so the final selector matches a different shape.
 - **`var()` animation fallbacks stay in sync**
   - `@lightning-vue/compiler`: Also renames local keyframe names when they appear in a `var()` fallback, such as `animation-name: var(--anim, foo)` or `animation: var(--anim, foo) 1s`.
   - Current PostCSS path: Can miss that fallback reference, so the fallback may still point at the old keyframe name and stop matching the renamed `@keyframes`.
