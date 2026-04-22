@@ -5,6 +5,11 @@ Performance-focused Vue SFC style compilation with Lightning CSS.
 `lightning-vue` is a monorepo around a Lightning CSS-backed replacement for the
 PostCSS-based style pipeline in `@vue/compiler-sfc`.
 
+> [!WARNING]
+> `lightning-vue` is in early development. Expect rough edges, missing
+> compatibility work, and breaking changes while the public API and behavior
+> are still settling.
+
 The main package is:
 
 - [`@lightning-vue/compiler`](./packages/compiler/README.md)

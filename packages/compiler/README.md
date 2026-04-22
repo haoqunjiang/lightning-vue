@@ -3,6 +3,11 @@
 `@lightning-vue/compiler` is a compiler-module variant of
 `@vue/compiler-sfc` whose style compiler is implemented with Lightning CSS.
 
+> [!WARNING]
+> `@lightning-vue/compiler` is in early development. Expect breaking changes,
+> incomplete compatibility coverage, and behavior shifts while the style
+> compiler is still being hardened.
+
 The package re-exports the public `@vue/compiler-sfc` surface so tooling can
 swap it in as a compiler-module override, but it owns its own style engine:
 
@@ -78,46 +83,33 @@ When those option shapes are needed, use `@vue/compiler-sfc`.
 This package currently has a small set of intentional semantic drifts from the
 current PostCSS-based `@vue/compiler-sfc` implementation.
 
-- Valid wildcard selectors such as `* + :hover` and `svg|*` are preserved as
-  valid scoped selectors even though the current PostCSS path still has edge
-  cases around some wildcard forms.
-- Logical selector wrappers such as `:has(...)` and `:not(...)` keep an outer
-  component scope anchor even when their inner branches contain Vue carriers
-  like `:deep(...)` or `:slotted(...)`. This avoids turning the whole selector
-  into an unanchored global match when the carrier rewrite happens inside the
-  logical wrapper.
-- Animation/keyframes rewriting follows CSS parsing rather than the current
-  PostCSS string heuristic. In practice this means ambiguous shorthands like
-  `animation: paused foo 1s` rewrite the actual animation-name (`foo`) instead
-  of the first matching token, and keyword-only shorthands like
-  `animation: ease 1s` remain non-keyframe shorthands rather than being treated
-  as references to local `@keyframes ease`. The same source rewrite also
-  follows keyframe names through `var()` fallbacks such as
-  `animation-name: var(--anim, foo)` and `animation: var(--anim, foo) 1s`.
-- `:slotted(...)` keeps slot context through nested conditional at-rules such
-  as `@media`, `@supports`, and `@container`. For example,
-  `:slotted(.x) { @media print { .b {} } }` is treated as matching slotted
-  content under the media condition rather than re-entering the component's
-  local scope inside the at-rule.
-- Mixed selector-list branches that disagree about deep/slot nesting context
-  are handled conservatively. For example, nested rules under
-  `:slotted(.x), .y` keep the descendant locally scoped instead of trying to
-  distribute branch-specific nesting context through the selector list. In
-  development, this emits a warning so the selector can be split explicitly if
-  the branch-specific behavior matters.
-- Native `@scope` root and limit selectors are not source-scoped yet. This is
-  currently a compatible limitation with the PostCSS compiler, which also
-  leaves `@scope` selectors untouched in scoped styles.
-- CSS Modules default naming follows Lightning CSS's built-in `[hash]_[local]`
-  pattern rather than the current `@vue/compiler-sfc` / `postcss-modules`
-  default function (`_<local>_<hash>_<line>`). Provide an explicit
-  `modulesOptions.generateScopedName` pattern when stable naming matters more
-  than compiler-sfc parity.
-- Animation declaration detection and `var()` fallback rewriting are handled
-  case-insensitively, so valid inputs such as `Animation: foo 1s` and
-  `animation-name: Var(--anim, foo)` stay aligned with renamed local
-  `@keyframes`. The current PostCSS compiler still uses lowercase-only
-  heuristics for these cases.
+For concrete examples and side-by-side outputs, see the divergence playground:
+<https://lightning-vue.haoqun.dev/divergence/>
+
+- **Wildcard selectors stay valid**
+  - `@lightning-vue/compiler`: Keeps valid selectors such as `* + :hover` and `svg\|*` valid after scoping.
+  - Current PostCSS path: Still breaks some wildcard forms.
+- **Logical wrappers keep the outer selector local**
+  - `@lightning-vue/compiler`: Keeps selectors like `:not(.foo :deep(.bar))` and `:has(.foo :deep(.bar))` tied to the component. The part outside `:deep(...)` is still scoped locally.
+  - Current PostCSS path: Still leaves `:deep(...)` unresolved inside those logical wrappers, so the final selector does not lower to the same locally anchored shape.
+- **`var()` animation fallbacks stay in sync**
+  - `@lightning-vue/compiler`: Also renames local keyframe names when they appear in a `var()` fallback, such as `animation-name: var(--anim, foo)` or `animation: var(--anim, foo) 1s`.
+  - Current PostCSS path: Can miss that fallback reference, so the fallback may still point at the old keyframe name and stop matching the renamed `@keyframes`.
+- **Nested `:slotted(...)` keeps its meaning**
+  - `@lightning-vue/compiler`: Keeps nested selectors under `:slotted(...)` targeting slotted content, even inside `@media`, `@supports`, and `@container`.
+  - Current PostCSS path: Can lose that meaning inside nested at-rules and treat the nested rule like an ordinary local selector instead.
+- **Split mixed slotted and local selector lists**
+  - `@lightning-vue/compiler`: For `:slotted(.x), .y { .b {} }`, the nested `.b` is emitted as a local descendant of `.y`. It does not also get a second slotted interpretation.
+  - Current PostCSS path: Can blur those branches together. A single nested rule cannot safely mean two different things at once, so split the selector list when the slotted branch and the local branch need different output.
+- **CSS Modules naming differs**
+  - `@lightning-vue/compiler`: Uses Lightning CSS's built-in `[hash]_[local]` pattern by default.
+  - Current PostCSS path: Uses the `@vue/compiler-sfc` / `postcss-modules` default of `_<local>_<hash>_<line>`.
+- **Animation detection is case-insensitive**
+  - `@lightning-vue/compiler`: Treats animation declarations and `var()` fallback rewriting case-insensitively.
+  - Current PostCSS path: Still uses lowercase-only heuristics, so valid inputs such as `Animation: foo 1s` and `animation-name: Var(--anim, foo)` can stop tracking the renamed local `@keyframes`.
+- **Rare ambiguous animation shorthands follow CSS parsing**
+  - `@lightning-vue/compiler`: In ambiguous shorthands such as `animation: paused foo 1s`, it renames the actual keyframe name `foo` and leaves `paused` alone.
+  - Current PostCSS path: In rare situations, still splits the shorthand into whitespace-separated tokens and rewrites the first token that matches a local `@keyframes` name. That can rename `paused` instead of `foo`, or rename `ease` in `animation: ease 1s` when `ease` is only being used as the timing function.
 
 ## Related Packages
 
