@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,13 +7,20 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const packageBuilds = [
   {
     cwd: path.join(repoRoot, "packages/utils"),
-    buildArgs: ["pack", "src/index.ts", "--format", "esm", "--format", "cjs", "--dts"],
     watchArgs: ["pack", "src/index.ts", "--format", "esm", "--format", "cjs", "--dts", "--watch"],
+    readyFiles: ["dist/index.mjs", "dist/index.cjs"],
   },
   {
     cwd: path.join(repoRoot, "packages/compiler"),
-    buildArgs: ["pack"],
     watchArgs: ["pack", "--watch"],
+    readyFiles: [
+      "dist/index.mjs",
+      "dist/browser.mjs",
+      "dist/debug.mjs",
+      "dist/debug/nesting.mjs",
+      "dist/debug/scopedSelector.mjs",
+      "dist/debug/compileSession.mjs",
+    ],
   },
 ];
 const appDirs = {
@@ -36,12 +44,33 @@ if (!appDir) {
   process.exit(1);
 }
 
-for (const pkg of packageBuilds) {
-  await run(pkg.cwd, pkg.buildArgs);
+const watchedBuilds = packageBuilds.map((pkg) => {
+  const watchedBuild = spawnWatchedBuild(pkg.cwd, pkg.watchArgs);
+
+  return {
+    child: watchedBuild.child,
+    ready: waitForBuildArtifacts(
+      watchedBuild.child,
+      pkg.cwd,
+      pkg.readyFiles,
+      watchedBuild.startedAt,
+    ),
+  };
+});
+
+try {
+  await Promise.all(watchedBuilds.map((watchedBuild) => watchedBuild.ready));
+} catch (error) {
+  for (const watchedBuild of watchedBuilds) {
+    if (!watchedBuild.child.killed) {
+      watchedBuild.child.kill("SIGTERM");
+    }
+  }
+  throw error;
 }
 
 const children = [
-  ...packageBuilds.map((pkg) => spawnVp(pkg.cwd, pkg.watchArgs)),
+  ...watchedBuilds.map((watchedBuild) => watchedBuild.child),
   spawnVp(appDir, ["dev"]),
 ];
 
@@ -95,22 +124,107 @@ function spawnVp(cwd, args) {
   });
 }
 
-function run(cwd, args) {
-  return new Promise((resolve, reject) => {
-    const child = spawnVp(cwd, args);
+function spawnWatchedBuild(cwd, args) {
+  const startedAt = Date.now();
+  const child = spawn("vp", args, {
+    cwd,
+    stdio: ["inherit", "pipe", "pipe"],
+  });
+  pipeOutput(child.stdout, process.stdout);
+  pipeOutput(child.stderr, process.stderr);
+  return {
+    child,
+    startedAt,
+  };
+}
+
+function waitForBuildArtifacts(child, cwd, files, startedAt) {
+  const ready = new Promise((resolve, reject) => {
+    let settledTimer = null;
+    let pollTimer = null;
+    let resolved = false;
+    let lastSignature = "";
+
+    const finish = (callback) => {
+      if (settledTimer) {
+        clearTimeout(settledTimer);
+      }
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+      }
+      callback();
+    };
+
+    const poll = () => {
+      if (resolved) {
+        return;
+      }
+
+      const stats = files.map((file) => {
+        const fullPath = path.join(cwd, file);
+
+        if (!fs.existsSync(fullPath)) {
+          return null;
+        }
+
+        const stat = fs.statSync(fullPath);
+
+        if (stat.mtimeMs < startedAt) {
+          return null;
+        }
+
+        return `${file}:${stat.size}:${stat.mtimeMs}`;
+      });
+
+      if (stats.some((stat) => stat === null)) {
+        lastSignature = "";
+        pollTimer = setTimeout(poll, 100);
+        return;
+      }
+
+      const signature = stats.join("|");
+
+      if (signature !== lastSignature) {
+        lastSignature = signature;
+
+        if (settledTimer) {
+          clearTimeout(settledTimer);
+        }
+
+        settledTimer = setTimeout(() => {
+          resolved = true;
+          finish(resolve);
+        }, 250);
+      }
+
+      pollTimer = setTimeout(poll, 100);
+    };
 
     child.on("exit", (code, signal) => {
+      if (resolved) {
+        return;
+      }
+
       if (signal) {
-        reject(new Error(`vp ${args.join(" ")} exited with signal ${signal}`));
+        finish(() => reject(new Error(`vp pack --watch exited with signal ${signal}`)));
         return;
       }
 
       if (code !== 0) {
-        reject(new Error(`vp ${args.join(" ")} exited with code ${code ?? 1}`));
+        finish(() => reject(new Error(`vp pack --watch exited with code ${code ?? 1}`)));
         return;
       }
-
-      resolve();
     });
+
+    poll();
+  });
+
+  return ready;
+}
+
+function pipeOutput(stream, target) {
+  stream.setEncoding("utf8");
+  stream.on("data", (chunk) => {
+    target.write(chunk);
   });
 }
