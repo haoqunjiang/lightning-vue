@@ -19,7 +19,7 @@ import type { SelectorParserOptions } from "../src/selectors";
  *   not just selector parsing.
  * - `lossy.mjs`
  *   The upstream file tests a separate `lossless: false` serializer mode. This
- *   lexer exposes one canonical serializer instead, so the cases that still map
+ *   the package exposes one canonical serializer instead, so the cases that still map
  *   cleanly are adapted below rather than copied verbatim.
  */
 
@@ -1284,8 +1284,8 @@ describe("adapted from lossy.mjs", () => {
     },
   ]);
 
-  runSupportedCases([
-    ...[
+  runSupportedCases(
+    [
       ["namespace, space before", "   postcss|button"],
       ["namespace, space after", "postcss|button     "],
       ["namespace - all elements, space before", "   postcss|*"],
@@ -1318,6 +1318,9 @@ describe("adapted from lossy.mjs", () => {
       input,
       expected,
     })),
+  );
+
+  runSupportedCases([
     { name: "tag - trailing slash (1)", input: "h1\\    ", expected: false },
     {
       name: "tag - trailing slash (2)",

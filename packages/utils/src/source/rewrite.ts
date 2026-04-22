@@ -24,6 +24,9 @@ export interface CssSelectorSourceRewriteOptions {
   /**
    * Rewrites one parsed selector and appends zero or more output selectors to
    * `target`.
+   *
+   * Callers may filter individual selectors out of a selector list, but the
+   * final rewritten prelude must still contain at least one selector.
    */
   appendRewrittenSelectors: (selector: Selector, target: Selector[]) => void;
 }
@@ -155,6 +158,9 @@ function rewriteSelectorPrelude(
   const rewrittenSelectors: Selector[] = [];
   for (const selector of selectors) {
     appendRewrittenSelectors(selector, rewrittenSelectors);
+  }
+  if (!rewrittenSelectors.length) {
+    throw new Error("Selector rewrite removed every selector from a rule prelude.");
   }
   return rewrittenSelectors.map((selector) => stringifySelector(selector)).join(", ");
 }

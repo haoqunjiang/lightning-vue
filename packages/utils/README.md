@@ -1,4 +1,4 @@
-# Lightning CSS Utils
+# `@lightning-vue/utils`
 
 This package contains the source-level and selector-level utilities that sit
 between raw CSS text and Lightning CSS.
@@ -10,8 +10,8 @@ The design goal is narrow:
 - stay compatible with Lightning CSS data shapes instead of inventing a new
   selector model.
 
-This is a standalone package in the monorepo. It is used by `compiler-sfc`
-today, but its boundary is intentionally generic enough for other
+This is a standalone package in the monorepo. It is used by
+`@lightning-vue/compiler` today, but its boundary is intentionally generic enough for other
 Lightning CSS-compatible source and selector transforms.
 
 ## Dependency Contract

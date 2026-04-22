@@ -6,11 +6,11 @@ interface SkippedCase {
 }
 
 const preprocessorReason =
-  "Preprocessor interpolation syntax is outside the selector subset supported by the lightweight lexer.";
+  "Preprocessor interpolation syntax is outside the selector subset supported by @lightning-vue/utils.";
 const stringPseudoArgumentReason =
-  "String-valued pseudo arguments are not implemented by the lightweight lexer; only selector-list arguments are supported.";
+  "String-valued pseudo arguments are not implemented by @lightning-vue/utils; only selector-list arguments are supported.";
 const frameworkSyntaxReason =
-  "Framework-specific identifier syntax is outside the selector subset supported by the lightweight lexer.";
+  "Framework-specific identifier syntax is outside the selector subset supported by @lightning-vue/utils.";
 
 function runSkippedCases(cases: SkippedCase[]): void {
   for (const { name, reason } of cases) {
@@ -56,7 +56,7 @@ describe("migrated from attributes.mjs", () => {
     {
       name: "non standard modifiers",
       reason:
-        "Only the standard `i` and `s` attribute case-sensitivity modifiers are implemented by the lightweight lexer.",
+        "Only the standard `i` and `s` attribute case-sensitivity modifiers are implemented by @lightning-vue/utils.",
     },
   ]);
 });
@@ -103,7 +103,7 @@ describe("migrated from nonstandard.mjs", () => {
     {
       name: "styled selector (2)",
       reason:
-        "Framework-specific identifier syntax and non-selector-list pseudo arguments are outside the selector subset supported by the lightweight lexer.",
+        "Framework-specific identifier syntax and non-selector-list pseudo arguments are outside the selector subset supported by @lightning-vue/utils.",
     },
   ]);
 });

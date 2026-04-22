@@ -1,36 +1,38 @@
 import type { TokenOrValue } from "lightningcss";
-import * as lexer from "../src";
+import * as utils from "../src";
 import * as selectors from "../src/selectors";
 import * as source from "../src/source";
 
 function stringifySelectorList(
-  selectorList: ReturnType<typeof lexer.parseSelectorListFromString>,
+  selectorList: ReturnType<typeof utils.parseSelectorListFromString>,
 ): string {
-  return selectorList.map((selector) => lexer.stringifySelector(selector)).join(", ");
+  return selectorList.map((selector) => utils.stringifySelector(selector)).join(", ");
 }
 
 describe("public root entrypoint", () => {
   test("re-exports the selector-facing API", () => {
-    expect(lexer.parseSelectorListFromString).toBe(selectors.parseSelectorListFromString);
-    expect(lexer.parseSelectorListFromTokens).toBe(selectors.parseSelectorListFromTokens);
-    expect(lexer.stringifySelector).toBe(selectors.stringifySelector);
-    expect(lexer.stringifyTokens).toBe(selectors.stringifyTokens);
+    expect(utils.parseSelectorListFromString).toBe(selectors.parseSelectorListFromString);
+    expect(utils.parseSelectorListFromTokens).toBe(selectors.parseSelectorListFromTokens);
+    expect(utils.decodeCssEscape).toBe(selectors.decodeCssEscape);
+    expect(utils.stringifySelector).toBe(selectors.stringifySelector);
+    expect(utils.stringifyTokens).toBe(selectors.stringifyTokens);
   });
 
   test("re-exports the source-facing API", () => {
-    expect(lexer.walkCssBlockPreludes).toBe(source.walkCssBlockPreludes);
-    expect(lexer.rewriteCssSelectorSource).toBe(source.rewriteCssSelectorSource);
-    expect(lexer.rewriteCssSelectorSourceWithMap).toBe(source.rewriteCssSelectorSourceWithMap);
-    expect(lexer.parseCssBlockTree).toBe(source.parseCssBlockTree);
-    expect(lexer.scopeSelectorPrelude).toBe(source.scopeSelectorPrelude);
-    expect(lexer.forEachTopLevelTextRange).toBe(source.forEachTopLevelTextRange);
-    expect(lexer.someTopLevelTextRange).toBe(source.someTopLevelTextRange);
-    expect(lexer.findTrimmedSourceRange).toBe(source.findTrimmedSourceRange);
-    expect(lexer.hasMeaningfulCssText).toBe(source.hasMeaningfulCssText);
+    expect(utils.walkCssBlockPreludes).toBe(source.walkCssBlockPreludes);
+    expect(utils.rewriteCssSelectorSource).toBe(source.rewriteCssSelectorSource);
+    expect(utils.rewriteCssSelectorSourceWithMap).toBe(source.rewriteCssSelectorSourceWithMap);
+    expect(utils.parseCssBlockTree).toBe(source.parseCssBlockTree);
+    expect(utils.scopeSelectorPrelude).toBe(source.scopeSelectorPrelude);
+    expect(utils.forEachTopLevelTextRange).toBe(source.forEachTopLevelTextRange);
+    expect(utils.someTopLevelTextRange).toBe(source.someTopLevelTextRange);
+    expect(utils.findLastNonWhitespaceIndex).toBe(source.findLastNonWhitespaceIndex);
+    expect(utils.findTrimmedSourceRange).toBe(source.findTrimmedSourceRange);
+    expect(utils.hasMeaningfulCssText).toBe(source.hasMeaningfulCssText);
   });
 
   test("supports selector parsing and stringifying through the root entrypoint", () => {
-    const selectorList = lexer.parseSelectorListFromString(".foo, :is(.bar, .baz)");
+    const selectorList = utils.parseSelectorListFromString(".foo, :is(.bar, .baz)");
 
     expect(stringifySelectorList(selectorList)).toBe(".foo, :is(.bar, .baz)");
   });
@@ -43,15 +45,16 @@ describe("public root entrypoint", () => {
       { type: "token", value: { type: "ident", value: "bar" } },
     ];
 
-    const selectorList = lexer.parseSelectorListFromTokens(tokens);
+    const selectorList = utils.parseSelectorListFromTokens(tokens);
 
     expect(stringifySelectorList(selectorList)).toBe("foo, bar");
-    expect(lexer.stringifyTokens(tokens)).toBe("foo, bar");
+    expect(utils.stringifyTokens(tokens)).toBe("foo, bar");
+    expect(utils.decodeCssEscape("\\31 foo", 0)).toEqual({ end: 4, value: "1" });
   });
 
   test("supports source rewrites through the root entrypoint", () => {
-    const rewritten = lexer.rewriteCssSelectorSource(".foo { color: red; }", {
-      tryRewritePreludeDirect: (prelude) => lexer.scopeSelectorPrelude(prelude, "data-test"),
+    const rewritten = utils.rewriteCssSelectorSource(".foo { color: red; }", {
+      tryRewritePreludeDirect: (prelude) => utils.scopeSelectorPrelude(prelude, "data-test"),
       appendRewrittenSelectors: () => {
         throw new Error("root entrypoint should take the direct path here");
       },
@@ -72,13 +75,14 @@ describe("public root entrypoint", () => {
 `;
 
     const preludes: string[] = [];
-    lexer.walkCssBlockPreludes(sourceCode, (prelude) => {
+    utils.walkCssBlockPreludes(sourceCode, (prelude) => {
       preludes.push(prelude.normalizedPrelude);
     });
 
     expect(preludes).toEqual([".foo", "@media (min-width: 1px)", ".bar"]);
+    expect(utils.findLastNonWhitespaceIndex("  .foo \n")).toBe(5);
 
-    const roots = lexer.parseCssBlockTree(sourceCode);
+    const roots = utils.parseCssBlockTree(sourceCode);
     expect(roots).toHaveLength(1);
     expect(roots[0].normalizedPrelude).toBe(".foo");
     expect(roots[0].children[0].normalizedPrelude).toBe("@media (min-width: 1px)");

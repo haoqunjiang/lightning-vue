@@ -10,7 +10,9 @@ import { TokenSelectorParser } from "./tokenParser";
  * Parses a selector list from Lightning CSS `TokenOrValue[]`.
  *
  * This is mainly useful when Lightning CSS exposes custom selector function
- * arguments as raw tokens instead of structured selectors.
+ * arguments as raw tokens instead of structured selectors. It first tries the
+ * dedicated token parser and then falls back to stringify-and-reparse when the
+ * token path rejects an otherwise representable selector shape.
  */
 export function parseSelectorListFromTokens(
   tokens: TokenOrValue[],
