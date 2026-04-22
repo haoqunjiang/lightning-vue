@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "ready": "pnpm check && vp run -r test && vp run --filter './apps/*' build",
-    "release": "bumpp",
+    "release": "bumpp package.json \"packages/*/package.json\"",
     "build": "pnpm build:apps",
     "build:packages": "node tools/build-packages.mjs",
     "build:apps": "pnpm build:packages && vp run --filter './apps/*' build",

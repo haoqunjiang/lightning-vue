@@ -10,8 +10,9 @@ follow these steps:
    - To skip the prompt, pass a version or release type through to `bumpp`, for
      example `pnpm release -- --release patch` or
      `pnpm release -- --release 0.0.2`.
-   - This bumps only `packages/utils/package.json` and
-     `packages/compiler/package.json`, then creates the release commit and tag.
+   - This bumps the private root `package.json` together with the packages under
+     `packages/*`, but skips the apps under `apps/*`, then creates the release
+     commit and tag.
 3. Push the commit and tag by running `git push origin main --follow-tags`.
 4. GitHub Actions runs `.github/workflows/publish.yml` on the tag and publishes
    the packages under `packages/*` with npm trusted publishing.
