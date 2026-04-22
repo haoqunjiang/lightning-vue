@@ -11,11 +11,11 @@
   "dependencies": {
     "@lightning-vue/compiler": "workspace:*",
     "@vue/repl": "4.7.1",
-    "@vue/server-renderer": "^3.5.32",
+    "@vue/server-renderer": "catalog:",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "lightningcss-wasm": "^1.32.0",
-    "vue": "^3.5.32"
+    "vue": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.6",

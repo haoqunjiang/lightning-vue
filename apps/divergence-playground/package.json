@@ -10,11 +10,11 @@
   },
   "dependencies": {
     "@lightning-vue/compiler": "workspace:*",
-    "@vue/compiler-sfc": "3.5.32",
+    "@vue/compiler-sfc": "catalog:",
     "lightningcss-wasm": "^1.30.2",
     "monaco-editor": "^0.52.2",
     "prismjs": "^1.30.0",
-    "vue": "^3.5.32"
+    "vue": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.6",

@@ -75,9 +75,9 @@
   },
   "dependencies": {
     "@lightning-vue/utils": "workspace:*",
-    "@vue/compiler-core": "3.5.32",
-    "@vue/compiler-sfc": "3.5.32",
-    "@vue/shared": "3.5.32",
+    "@vue/compiler-core": "catalog:",
+    "@vue/compiler-sfc": "catalog:",
+    "@vue/shared": "catalog:",
     "hash-sum": "^2.0.0",
     "magic-string": "^0.30.21",
     "merge-source-map": "^1.1.0"

@@ -5,6 +5,11 @@ packages:
 
 catalog:
   "@types/node": ^24
+  "@vue/compiler-core": ^3.5.33
+  "@vue/compiler-sfc": ^3.5.33
+  "@vue/server-renderer": ^3.5.33
+  "@vue/shared": ^3.5.33
+  vue: ^3.5.33
   bumpp: ^11.0.1
   typescript: ^5
   vite: npm:@voidzero-dev/vite-plus-core@0.1.18
