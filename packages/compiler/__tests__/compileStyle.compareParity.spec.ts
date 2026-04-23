@@ -1,18 +1,17 @@
 import { Features, transform } from "lightningcss";
 import { describe, expect, test } from "vitest";
 import {
-  animationFallbackScopedSource,
   animationScopedSource,
   compileStyle,
   compileStyleWithLightningCss,
   compileWith,
-  logicalWrapperScopedSource,
+  deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleCarrierScopedSource,
   nestedAtRuleScopedSource,
   nestedSelectorScopedSource,
+  nestedWrappedDeepSlottedSelectorScopedSource,
   simpleScopedSource,
-  vueScopedFunctionSource,
+  wrappedDeepSelectorScopedSource,
 } from "../bench/compileStyleBenchShared";
 
 function normalizeCompiledCss(code: string) {
@@ -36,7 +35,7 @@ function compilePair(source: string) {
 describe("compileStyle compare benchmark labels", () => {
   test.each([
     ["simple selectors", simpleScopedSource],
-    [":deep() / :slotted() / :global() selectors", vueScopedFunctionSource],
+    [":deep() / :slotted() / :global() selectors", deepSlottedGlobalSelectorSource],
     ["animation keyframes", animationScopedSource],
     ["nested selectors", nestedSelectorScopedSource],
     ["nested at-rules", nestedAtRuleScopedSource],
@@ -46,10 +45,12 @@ describe("compileStyle compare benchmark labels", () => {
   });
 
   test.each([
-    ["animation var() fallbacks and vendor-prefixed keyframes", animationFallbackScopedSource],
-    ["logical wrappers", logicalWrapperScopedSource],
-    ["nested :deep() / :slotted() selectors inside at-rules", nestedAtRuleCarrierScopedSource],
+    ["selectors that wrap :deep()", wrappedDeepSelectorScopedSource],
     ["mixed realistic styles", mixedRealisticScopedSource],
+    [
+      "nested at-rules with :slotted() and wrapped :deep()",
+      nestedWrappedDeepSlottedSelectorScopedSource,
+    ],
   ])("%s still differs after normalization", (_label, source) => {
     const { postcss, lightningcss } = compilePair(source);
     expect(lightningcss).not.toBe(postcss);

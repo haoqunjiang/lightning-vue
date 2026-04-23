@@ -1,18 +1,17 @@
 import { bench, describe } from "vitest";
 import {
-  animationFallbackScopedSource,
   animationScopedSource,
   compileStyleWithLightningCss,
   compileWith,
   compileWithLightningCssUsingNormalizedNestedScoping,
-  logicalWrapperScopedSource,
+  deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleCarrierScopedSource,
   nestedAtRuleScopedSource,
   nestedSelectorScopedSource,
+  nestedWrappedDeepSlottedSelectorScopedSource,
   simpleScopedSource,
-  vueScopedFunctionSource,
   warmupCompileBenchSuite,
+  wrappedDeepSelectorScopedSource,
 } from "./compileStyleBenchShared";
 
 warmupCompileBenchSuite();
@@ -26,20 +25,15 @@ describe("compileStyle internal: lightningcss end to end", () => {
     compileWith(compileStyleWithLightningCss, nestedAtRuleScopedSource);
   });
 
-  bench("lightningcss logical wrappers", () => {
-    compileWith(compileStyleWithLightningCss, logicalWrapperScopedSource);
+  bench("lightningcss selectors that wrap :deep()", () => {
+    compileWith(compileStyleWithLightningCss, wrappedDeepSelectorScopedSource);
   });
 
   bench("lightningcss animation keyframes", () => {
     compileWith(compileStyleWithLightningCss, animationScopedSource);
   });
-
-  bench("lightningcss animation var() fallbacks and vendor-prefixed keyframes", () => {
-    compileWith(compileStyleWithLightningCss, animationFallbackScopedSource);
-  });
-
-  bench("lightningcss nested :deep() / :slotted() selectors inside at-rules", () => {
-    compileWith(compileStyleWithLightningCss, nestedAtRuleCarrierScopedSource);
+  bench("lightningcss nested at-rules with :slotted() and wrapped :deep()", () => {
+    compileWith(compileStyleWithLightningCss, nestedWrappedDeepSlottedSelectorScopedSource);
   });
 
   bench("lightningcss nested selectors", () => {
@@ -47,7 +41,7 @@ describe("compileStyle internal: lightningcss end to end", () => {
   });
 
   bench("lightningcss :deep() / :slotted() / :global() selectors", () => {
-    compileWith(compileStyleWithLightningCss, vueScopedFunctionSource);
+    compileWith(compileStyleWithLightningCss, deepSlottedGlobalSelectorSource);
   });
 
   bench("lightningcss mixed realistic styles", () => {
@@ -64,8 +58,10 @@ describe("compileStyle internal: normalized source path", () => {
     compileWithLightningCssUsingNormalizedNestedScoping(nestedSelectorScopedSource);
   });
 
-  bench("lightningcss nested :deep() / :slotted() selectors inside at-rules (normalized source path)", () => {
-    compileWithLightningCssUsingNormalizedNestedScoping(nestedAtRuleCarrierScopedSource);
+  bench("lightningcss nested at-rules with :slotted() and wrapped :deep() (normalized source path)", () => {
+    compileWithLightningCssUsingNormalizedNestedScoping(
+      nestedWrappedDeepSlottedSelectorScopedSource,
+    );
   });
 
   bench("lightningcss mixed realistic styles (normalized source path)", () => {

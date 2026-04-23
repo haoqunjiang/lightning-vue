@@ -279,6 +279,14 @@ function printGroupedBenchmarkSummary(benchmarks, baselineMap) {
       if (subgroupLabel) {
         console.log(`  - ${subgroupLabel}`);
       }
+      const comparison = getLightningVsPostcssComparison(members);
+      if (comparison) {
+        const direction =
+          comparison.faster.runtime === "lightningcss"
+            ? `lightningcss is ${highlightMetric(formatMultiplier(comparison.multiplier))} faster than postcss`
+            : `postcss is ${highlightMetric(formatMultiplier(comparison.multiplier))} faster than lightningcss`;
+        console.log(`    ${direction}`);
+      }
       for (const benchmark of [...members].sort((left, right) => right.medianMs - left.medianMs)) {
         const key = `${benchmark.file}::${benchmark.group}::${benchmark.name}`;
         const baselineBenchmark = baselineMap.get(key);
@@ -286,11 +294,54 @@ function printGroupedBenchmarkSummary(benchmarks, baselineMap) {
           ? formatPercentDelta(benchmark.medianMs, baselineBenchmark.medianMs, true)
           : "";
         console.log(
-          `    - ${benchmark.name}: ${formatMilliseconds(benchmark.medianMs)} median, ${formatHertz(benchmark.hz)}${delta}`,
+          `    - ${benchmark.name}: ${highlightMetric(formatMilliseconds(benchmark.medianMs))} median, ${highlightMetric(formatHertz(benchmark.hz))}${delta}`,
         );
       }
     }
   }
+}
+
+function getLightningVsPostcssComparison(members) {
+  if (members.length !== 2) {
+    return null;
+  }
+
+  const runtimeMembers = members
+    .map((benchmark) => ({
+      benchmark,
+      runtime: getRuntimeLabel(benchmark.name),
+    }))
+    .filter((entry) => entry.runtime);
+
+  if (runtimeMembers.length !== 2) {
+    return null;
+  }
+
+  const lightningcss = runtimeMembers.find((entry) => entry.runtime === "lightningcss");
+  const postcss = runtimeMembers.find((entry) => entry.runtime === "postcss");
+  if (!lightningcss || !postcss) {
+    return null;
+  }
+
+  const faster =
+    lightningcss.benchmark.hz >= postcss.benchmark.hz ? lightningcss : postcss;
+  const slower = faster === lightningcss ? postcss : lightningcss;
+
+  return {
+    faster,
+    slower,
+    multiplier: faster.benchmark.hz / slower.benchmark.hz,
+  };
+}
+
+function getRuntimeLabel(name) {
+  if (name.startsWith("lightningcss ")) {
+    return "lightningcss";
+  }
+  if (name.startsWith("postcss ")) {
+    return "postcss";
+  }
+  return null;
 }
 
 function isHeadroomBenchRun(benchFiles) {
@@ -372,7 +423,7 @@ function printLightningCssHeadroomSummary(benchmarks) {
     "  Each row uses the same corpus three ways: raw Lightning CSS, Lightning CSS with a no-op visitor, and the full compiler pipeline.",
   );
   console.log(
-    "  The no-op visitor numbers are a secondary check for Rust-to-JavaScript hook overhead, because some fast paths finish before the final Lightning visitor stage.",
+    "  The no-op visitor numbers are a secondary reference for Rust-to-JavaScript hook overhead. They are not the main usage baseline, because some fast paths finish before the final Lightning visitor stage.",
   );
   for (const [category, rows] of headroomGroups) {
     console.log(`- ${category}`);

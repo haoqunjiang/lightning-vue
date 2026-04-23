@@ -37,11 +37,11 @@ of shipping only a standalone `compileStyle`.
 
 ## Style Compiler Contract
 
-This package is intentionally strict.
+This package is strict.
 
 It does **not** emulate the full PostCSS-based style pipeline from
-`@vue/compiler-sfc`. Unsupported style options fail fast instead of silently
-falling back.
+`@vue/compiler-sfc`. Unsupported style options fail fast. There is no silent
+fallback.
 
 Supported:
 
@@ -89,12 +89,9 @@ For concrete examples and side-by-side outputs, see the divergence playground:
 - **Wildcard selectors stay valid**
   - `@lightning-vue/compiler`: Keeps valid selectors such as `* + :hover` and `svg\|*` valid after scoping.
   - Current PostCSS path: Still breaks some wildcard forms.
-- **Logical wrappers keep the outer local anchor**
-  - `@lightning-vue/compiler`: For selectors like `:not(.foo :deep(.bar))` and `:has(.foo :deep(.bar))`, lowers the deep branch and still keeps the wrapper itself locally anchored.
-  - Current PostCSS path: Now lowers the inner deep branch too, but it can still drop the outer `[data-v-*]` anchor on the wrapper, so the final selector matches a different shape.
-- **`var()` animation fallbacks stay in sync**
-  - `@lightning-vue/compiler`: Also renames local keyframe names when they appear in a `var()` fallback, such as `animation-name: var(--anim, foo)` or `animation: var(--anim, foo) 1s`.
-  - Current PostCSS path: Can miss that fallback reference, so the fallback may still point at the old keyframe name and stop matching the renamed `@keyframes`.
+- **Selectors that wrap `:deep()` stay locally scoped**
+  - `@lightning-vue/compiler`: In selectors like `:not(.foo :deep(.bar))` and `:has(.foo :deep(.bar))`, lowers the deep branch and keeps the wrapper locally anchored.
+  - Current PostCSS path: The inner deep branch now lowers too. The outer `[data-v-*]` anchor can still drop off the wrapper, which changes the final selector shape.
 - **Nested `:slotted(...)` keeps its meaning**
   - `@lightning-vue/compiler`: Keeps nested selectors under `:slotted(...)` targeting slotted content, even inside `@media`, `@supports`, and `@container`.
   - Current PostCSS path: Can lose that meaning inside nested at-rules and treat the nested rule like an ordinary local selector instead.
@@ -104,12 +101,12 @@ For concrete examples and side-by-side outputs, see the divergence playground:
 - **CSS Modules naming differs**
   - `@lightning-vue/compiler`: Uses Lightning CSS's built-in `[hash]_[local]` pattern by default.
   - Current PostCSS path: Uses the `@vue/compiler-sfc` / `postcss-modules` default of `_<local>_<hash>_<line>`.
-- **Animation detection is case-insensitive**
-  - `@lightning-vue/compiler`: Treats animation declarations and `var()` fallback rewriting case-insensitively.
-  - Current PostCSS path: Still uses lowercase-only heuristics, so valid inputs such as `Animation: foo 1s` and `animation-name: Var(--anim, foo)` can stop tracking the renamed local `@keyframes`.
+- **Mixed-case animation declarations still track local keyframes**
+  - `@lightning-vue/compiler`: Tracks renamed local `@keyframes` through declarations such as `Animation: foo 1s` and `Animation-Name: foo`.
+  - Current PostCSS path: Still uses lowercase-only heuristics, so those valid mixed-case declarations can stop tracking the renamed local `@keyframes`.
 - **Rare ambiguous animation shorthands follow CSS parsing**
   - `@lightning-vue/compiler`: In ambiguous shorthands such as `animation: paused foo 1s`, it renames the actual keyframe name `foo` and leaves `paused` alone.
-  - Current PostCSS path: In rare situations, still splits the shorthand into whitespace-separated tokens and rewrites the first token that matches a local `@keyframes` name. That can rename `paused` instead of `foo`, or rename `ease` in `animation: ease 1s` when `ease` is only being used as the timing function.
+  - Current PostCSS path: In rare cases, still splits the shorthand into whitespace-separated tokens and rewrites the first token that matches a local `@keyframes` name. That can rename `paused` instead of `foo`, or rename `ease` in `animation: ease 1s` when `ease` is only a timing function.
 
 ## Related Packages
 

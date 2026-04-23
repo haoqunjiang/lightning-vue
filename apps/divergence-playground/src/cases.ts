@@ -24,7 +24,7 @@ export const curatedCases: DivergenceCase[] = [
   color: red;
   :deep(.title) { color: blue; }
 }`,
-    note: "The lightning-vue compiler normalizes the nested rule first, then applies the deep escape so the local `.card` declaration and the deep descendant land on separate final rules. The older PostCSS path still leaves the nested structure in place here.",
+    note: "The lightning-vue compiler emits one scoped rule for `.card` and a separate deep descendant rule for `.title`. The older PostCSS path keeps those pieces coupled, so the final output does not separate them the same way.",
     kind: "correctness-win",
   },
   {
@@ -33,7 +33,7 @@ export const curatedCases: DivergenceCase[] = [
   :global(.title) { color: blue; }
   .copy { color: red; }
 }`,
-    note: "The lightning-vue compiler preserves the global override while still scoping the local nested branch after nesting normalization. The older PostCSS path keeps the nested block structure, so the final scoped behavior is less explicit.",
+    note: "The lightning-vue compiler emits the global `.title` override separately from the scoped `.copy` branch. The older PostCSS path keeps those branches more entangled in the final output.",
     kind: "correctness-win",
   },
   {
@@ -73,19 +73,6 @@ export const curatedCases: DivergenceCase[] = [
     kind: "correctness-win",
   },
   {
-    title: "Animation fallback name is rewritten inside var()",
-    source: `@keyframes fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.card {
-  animation-name: var(--anim, fade);
-}`,
-    note: "The lightning-vue compiler renames the local keyframe in the `var()` fallback too, so the declaration still points at the scoped `@keyframes` name. The older PostCSS path renames the keyframe block but leaves the fallback untouched.",
-    kind: "correctness-win",
-  },
-  {
     title: "Mixed slotted and local branches in one nested rule",
     source: `:slotted(.x), .y {
   .b { color: red; }
@@ -103,6 +90,19 @@ export const curatedCases: DivergenceCase[] = [
     title: "@scope roots stay global",
     source: `@scope (.scope-host) { .scope-probe { color: red; } }`,
     note: "This is a documented limitation shared with the current PostCSS path: @scope roots and limits are not scoped.",
+    kind: "shared-limit",
+  },
+  {
+    title: "Local keyframes inside animation var() fallbacks",
+    source: `@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.card {
+  animation-name: var(--anim, fade);
+}`,
+    note: "Both compilers rename the local `@keyframes` block but leave the `var()` fallback untouched, so the fallback still points at the original name.",
     kind: "shared-limit",
   },
   {

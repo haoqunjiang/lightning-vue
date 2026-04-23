@@ -420,7 +420,7 @@ describe("compileStyleWithLightningCss", () => {
     const result = compileStyleWithLightningCss({
       source: `
 .anim {
-  animation-name: var(--anim, fade);
+  animation-name: fade;
 }
 @keyframes fade {
   from { opacity: 0; }
@@ -434,96 +434,9 @@ describe("compileStyleWithLightningCss", () => {
 
     expect(result.errors).toHaveLength(0);
     const normalized = normalizeCssOutput(result.code);
-    expect(normalized).toContain(".anim { animation-name: var(--anim, fade); }");
+    expect(normalized).toContain(".anim { animation-name: fade; }");
     expect(normalized).toContain("@keyframes fade {");
     expect(normalized).not.toContain("fade-test");
-  });
-
-  test.each([
-    [
-      "animation-name var() fallback",
-      `
-.anim {
-  animation-name: var(--anim, foo);
-}
-@keyframes foo {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`,
-    ],
-    [
-      "animation shorthand var() fallback",
-      `
-.anim {
-  animation: var(--anim, foo) 1s linear;
-}
-@keyframes foo {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`,
-    ],
-    [
-      "animation-name comment + mixed-case var() fallback",
-      `
-.anim {
-  animation-name: /*comment*/ Var(--anim, foo);
-}
-@keyframes foo {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`,
-    ],
-    [
-      "animation shorthand mixed-case play-state keyword",
-      `
-.anim {
-  animation: var(--anim, foo) PAUSED 1s;
-}
-@keyframes foo {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`,
-    ],
-    [
-      "animation shorthand mixed-case timing keyword",
-      `
-.anim {
-  animation: var(--anim, foo) EASE 1s;
-}
-@keyframes foo {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`,
-    ],
-    [
-      "animation shorthand inter-token comment",
-      `
-.anim {
-  animation: /*comment*/ var(--anim, foo) 1s linear;
-}
-@keyframes foo {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`,
-    ],
-  ])("rewrites local keyframes inside %s", (_label, source) => {
-    const result = compileStyleWithLightningCss({
-      source,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    const normalized = normalizeCssOutput(result.code);
-    expect(normalized).toContain("foo-test");
-    expect(normalized).toContain("@keyframes foo-test {");
   });
 
   test.each([
@@ -540,10 +453,10 @@ describe("compileStyleWithLightningCss", () => {
 `,
     ],
     [
-      "mixed-case animation-name var() fallback",
+      "mixed-case animation-name property",
       `
 .anim {
-  animation-name: Var(--anim, foo);
+  Animation-Name: foo;
 }
 @keyframes foo {
   from { opacity: 0; }
@@ -552,10 +465,10 @@ describe("compileStyleWithLightningCss", () => {
 `,
     ],
     [
-      "mixed-case animation shorthand var() fallback",
+      "mixed-case vendor-prefixed animation property",
       `
 .anim {
-  animation: VAR(--anim, foo) 1s linear;
+  -Webkit-Animation: foo 1s linear;
 }
 @keyframes foo {
   from { opacity: 0; }
@@ -582,47 +495,6 @@ describe("compileStyleWithLightningCss", () => {
     expect(normalizeCssOutput(postcssResult.code)).toContain("@keyframes foo-test {");
     expect(normalizeCssOutput(lightningResult.code)).toContain("@keyframes foo-test {");
     expect(normalizeCssOutput(lightningResult.code)).toContain("foo-test");
-  });
-
-  test.each([
-    [
-      "vendor-prefixed animation-name var() fallback",
-      `
-.anim {
-  -webkit-animation-name: var(--anim, foo);
-}
-@-webkit-keyframes foo {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`,
-      "@-webkit-keyframes foo-test {",
-    ],
-    [
-      "vendor-prefixed animation shorthand var() fallback",
-      `
-.anim {
-  -webkit-animation: var(--anim, foo) 1s linear;
-}
-@-webkit-keyframes foo {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`,
-      "@-webkit-keyframes foo-test {",
-    ],
-  ])("rewrites local keyframes inside %s", (_label, source, keyframesFragment) => {
-    const result = compileStyleWithLightningCss({
-      source,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    const normalized = normalizeCssOutput(result.code);
-    expect(normalized).toContain("foo-test");
-    expect(normalized).toContain(keyframesFragment);
   });
 
   test.each([
@@ -770,13 +642,13 @@ describe("compileStyleWithLightningCss", () => {
       ".card[data-v-test] :where(.title) { color: red; }",
     ],
     [
-      "logical wrappers now lower the inner deep branch but still miss the outer local anchor",
+      "wrapped :deep() selectors now lower the inner deep branch but still miss the outer local anchor",
       `:not(.foo :deep(.bar)) { color: red; }`,
       ":not(.foo[data-v-test] .bar) { color: red; }",
       ":not(.foo[data-v-test] .bar)[data-v-test] { color: red; }",
     ],
     [
-      "leading deep branches inside logical wrappers now rewrite but still scope a different side",
+      "leading deep branches inside wrapped :deep() selectors now rewrite but still scope a different side",
       `:not(:deep(.foo)) .bar { color: red; }`,
       ":not([data-v-test] .foo) .bar { color: red; }",
       ":not(.foo) .bar[data-v-test] { color: red; }",

@@ -1,18 +1,17 @@
 import { bench, describe } from "vitest";
 import {
-  animationFallbackScopedSource,
   animationScopedSource,
   compileStyle,
   compileStyleWithLightningCss,
   compileWith,
-  logicalWrapperScopedSource,
+  deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleCarrierScopedSource,
   nestedAtRuleScopedSource,
   nestedSelectorScopedSource,
+  nestedWrappedDeepSlottedSelectorScopedSource,
   simpleScopedSource,
-  vueScopedFunctionSource,
   warmupCompileBenchSuite,
+  wrappedDeepSelectorScopedSource,
 } from "./compileStyleBenchShared";
 
 warmupCompileBenchSuite();
@@ -28,6 +27,16 @@ describe("compileStyle comparison: parity cases", () => {
     });
   });
 
+  describe(":deep() / :slotted() / :global() selectors", () => {
+    bench("lightningcss :deep() / :slotted() / :global() selectors", () => {
+      compileWith(compileStyleWithLightningCss, deepSlottedGlobalSelectorSource);
+    });
+
+    bench("postcss :deep() / :slotted() / :global() selectors", () => {
+      compileWith(compileStyle, deepSlottedGlobalSelectorSource);
+    });
+  });
+
   describe("nested selectors", () => {
     bench("lightningcss nested selectors", () => {
       compileWith(compileStyleWithLightningCss, nestedSelectorScopedSource);
@@ -35,26 +44,6 @@ describe("compileStyle comparison: parity cases", () => {
 
     bench("postcss nested selectors", () => {
       compileWith(compileStyle, nestedSelectorScopedSource);
-    });
-  });
-
-  describe(":deep() / :slotted() / :global() selectors", () => {
-    bench("lightningcss :deep() / :slotted() / :global() selectors", () => {
-      compileWith(compileStyleWithLightningCss, vueScopedFunctionSource);
-    });
-
-    bench("postcss :deep() / :slotted() / :global() selectors", () => {
-      compileWith(compileStyle, vueScopedFunctionSource);
-    });
-  });
-
-  describe("nested at-rules", () => {
-    bench("lightningcss nested at-rules", () => {
-      compileWith(compileStyleWithLightningCss, nestedAtRuleScopedSource);
-    });
-
-    bench("postcss nested at-rules", () => {
-      compileWith(compileStyle, nestedAtRuleScopedSource);
     });
   });
 
@@ -67,16 +56,26 @@ describe("compileStyle comparison: parity cases", () => {
       compileWith(compileStyle, animationScopedSource);
     });
   });
+
+  describe("nested at-rules", () => {
+    bench("lightningcss nested at-rules", () => {
+      compileWith(compileStyleWithLightningCss, nestedAtRuleScopedSource);
+    });
+
+    bench("postcss nested at-rules", () => {
+      compileWith(compileStyle, nestedAtRuleScopedSource);
+    });
+  });
 });
 
 describe("compileStyle comparison: non-parity cases", () => {
-  describe("logical wrappers", () => {
-    bench("lightningcss logical wrapper selectors", () => {
-      compileWith(compileStyleWithLightningCss, logicalWrapperScopedSource);
+  describe("selectors that wrap :deep()", () => {
+    bench("lightningcss selectors that wrap :deep()", () => {
+      compileWith(compileStyleWithLightningCss, wrappedDeepSelectorScopedSource);
     });
 
-    bench("postcss logical wrapper selectors", () => {
-      compileWith(compileStyle, logicalWrapperScopedSource);
+    bench("postcss selectors that wrap :deep()", () => {
+      compileWith(compileStyle, wrappedDeepSelectorScopedSource);
     });
   });
 
@@ -90,23 +89,13 @@ describe("compileStyle comparison: non-parity cases", () => {
     });
   });
 
-  describe("nested :deep() / :slotted() selectors inside at-rules", () => {
-    bench("lightningcss nested :deep() / :slotted() selectors inside at-rules", () => {
-      compileWith(compileStyleWithLightningCss, nestedAtRuleCarrierScopedSource);
+  describe("nested at-rules with :slotted() and wrapped :deep()", () => {
+    bench("lightningcss nested at-rules with :slotted() and wrapped :deep()", () => {
+      compileWith(compileStyleWithLightningCss, nestedWrappedDeepSlottedSelectorScopedSource);
     });
 
-    bench("postcss nested :deep() / :slotted() selectors inside at-rules", () => {
-      compileWith(compileStyle, nestedAtRuleCarrierScopedSource);
-    });
-  });
-
-  describe("animation var() fallbacks and vendor-prefixed keyframes", () => {
-    bench("lightningcss animation var() fallbacks and vendor-prefixed keyframes", () => {
-      compileWith(compileStyleWithLightningCss, animationFallbackScopedSource);
-    });
-
-    bench("postcss animation var() fallbacks and vendor-prefixed keyframes", () => {
-      compileWith(compileStyle, animationFallbackScopedSource);
+    bench("postcss nested at-rules with :slotted() and wrapped :deep()", () => {
+      compileWith(compileStyle, nestedWrappedDeepSlottedSelectorScopedSource);
     });
   });
 });

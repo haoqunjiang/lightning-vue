@@ -40,7 +40,54 @@ final:
   - modules={"fooBar":"Ltp18W_foo-bar"}"
 `;
 
-exports[`'css vars and animation finalize pass' 1`] = `
+exports[`'css vars and animation rewrite path' 1`] = `
+"source: .card {
+  color: v-bind(themeColor);
+  animation: fade 1s;
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+context:
+  - filename=trace.css
+  - scoped=true
+  - modules=false
+  - sourceMap=false
+  - isProd=false
+
+initial:
+  - initial.source=".card {\\n  color: v-bind(themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
+  - initial.analysis=nested:false specials:false animations:true keyframes:1
+  - initial.inputMap=false
+  - initial.errors=0
+  - initial.dependencies=0
+
+prepared:
+  - prepared=true
+  - prepared.source=".card {\\n  color: var(--trace-themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
+  - prepared.analysis=nested:false specials:false animations:true keyframes:1
+  - prepared.inputMap=false
+  - prepared.errors=0
+  - prepared.dependencies=0
+
+transform:
+  - code=".card[data-v-trace]{\\n  color: var(--trace-themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
+  - selectorsScopedInSource=true
+  - includeNesting=false
+  - inputSourceMap=false
+  - cssModules=undefined
+
+final:
+  - code=".card[data-v-trace] {\\n  color: var(--trace-themeColor);\\n  animation: 1s fade-trace;\\n}\\n\\n@keyframes fade-trace {\\n  from {\\n    opacity: 0;\\n  }\\n\\n  to {\\n    opacity: 1;\\n  }\\n}\\n"
+  - map=false
+  - errors=0
+  - dependencies=0
+  - modules=undefined"
+`;
+
+exports[`'css vars with renamed keyframes' 1`] = `
 "source: .card {
   color: v-bind(themeColor);
   animation: fade 1s;

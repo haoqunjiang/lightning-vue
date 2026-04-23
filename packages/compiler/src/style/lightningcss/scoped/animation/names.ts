@@ -1,5 +1,5 @@
 import { normalizeEscapedKeyframesName } from "../../keyframeNames";
-import { findTopLevelSeparatorIndex, splitTopLevelSegments } from "./scan";
+import { splitTopLevelSegments } from "./scan";
 
 export function rewriteAnimationNameValue(
   value: string,
@@ -25,19 +25,9 @@ export function rewriteRawAnimationIdentifier(
     : raw + rewritten.slice(normalized.length);
 }
 
-export function isVarFunctionCall(value: string): boolean {
-  return /^var\(/i.test(value);
-}
-
 function rewriteAnimationNameComponent(value: string, keyframes: Record<string, string>): string {
   if (!value) {
     return value;
-  }
-
-  if (isVarFunctionCall(value)) {
-    return rewriteVarFunctionFallback(value, (fallback) =>
-      rewriteAnimationNameValue(fallback, keyframes),
-    );
   }
 
   const quoted = parseQuotedAnimationName(value);
@@ -47,31 +37,6 @@ function rewriteAnimationNameComponent(value: string, keyframes: Record<string, 
   }
 
   return rewriteRawAnimationIdentifier(value, keyframes) || value;
-}
-
-function rewriteVarFunctionFallback(
-  source: string,
-  rewriteFallback: (fallback: string) => string,
-): string {
-  const openParenIndex = source.indexOf("(");
-  const content = source.slice(openParenIndex + 1, -1);
-  const commaIndex = findTopLevelSeparatorIndex(content, ",");
-  if (commaIndex === -1) {
-    return source;
-  }
-
-  const fallback = content.slice(commaIndex + 1);
-  const leadingMatch = fallback.match(/^\s*/);
-  const trailingMatch = fallback.match(/\s*$/);
-  const leading = leadingMatch ? leadingMatch[0] : "";
-  const trailing = trailingMatch ? trailingMatch[0] : "";
-  const trimmedFallback = fallback.trim();
-  const rewrittenFallback = rewriteFallback(trimmedFallback);
-  if (rewrittenFallback === trimmedFallback) {
-    return source;
-  }
-
-  return `${source.slice(0, openParenIndex + 1)}${content.slice(0, commaIndex + 1)}${leading}${rewrittenFallback}${trailing})`;
 }
 
 function parseQuotedAnimationName(source: string): { quote: '"' | "'"; value: string } | null {

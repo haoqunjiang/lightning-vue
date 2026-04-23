@@ -14,6 +14,7 @@ export default defineConfig({
       "src/index.ts",
       "src/browser.ts",
       "src/debug.ts",
+      "src/debug/animation.ts",
       "src/debug/nesting.ts",
       "src/debug/scopedSelector.ts",
       "src/debug/compileSession.ts",

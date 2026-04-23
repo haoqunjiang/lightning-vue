@@ -1,16 +1,15 @@
 import { bench, describe } from "vitest";
 import {
-  animationFallbackScopedSource,
   animationScopedSource,
-  logicalWrapperScopedSource,
+  deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleCarrierScopedSource,
   nestedAtRuleScopedSource,
   nestedSelectorScopedSource,
+  nestedWrappedDeepSlottedSelectorScopedSource,
   simpleScopedSource,
   transformWithLightningCss,
-  vueScopedFunctionSource,
   warmupCompileBenchSuite,
+  wrappedDeepSelectorScopedSource,
 } from "./compileStyleBenchShared";
 
 warmupCompileBenchSuite();
@@ -29,7 +28,7 @@ describe("lightningcss baseline: raw engine throughput", () => {
   });
 
   bench("lightningcss :deep() / :slotted() / :global() selectors", () => {
-    transformWithLightningCss(vueScopedFunctionSource);
+    transformWithLightningCss(deepSlottedGlobalSelectorSource);
   });
 
   bench("lightningcss nested at-rules", () => {
@@ -40,20 +39,16 @@ describe("lightningcss baseline: raw engine throughput", () => {
     transformWithLightningCss(animationScopedSource);
   });
 
-  bench("lightningcss logical wrappers", () => {
-    transformWithLightningCss(logicalWrapperScopedSource);
+  bench("lightningcss selectors that wrap :deep()", () => {
+    transformWithLightningCss(wrappedDeepSelectorScopedSource);
   });
 
   bench("lightningcss mixed realistic styles", () => {
     transformWithLightningCss(mixedRealisticScopedSource);
   });
 
-  bench("lightningcss nested :deep() / :slotted() selectors inside at-rules", () => {
-    transformWithLightningCss(nestedAtRuleCarrierScopedSource);
-  });
-
-  bench("lightningcss animation var() fallbacks and vendor-prefixed keyframes", () => {
-    transformWithLightningCss(animationFallbackScopedSource);
+  bench("lightningcss nested at-rules with :slotted() and wrapped :deep()", () => {
+    transformWithLightningCss(nestedWrappedDeepSlottedSelectorScopedSource);
   });
 });
 
@@ -67,7 +62,7 @@ describe("lightningcss baseline: no-op visitor throughput", () => {
   });
 
   bench("lightningcss :deep() / :slotted() / :global() selectors", () => {
-    transformWithLightningCssNoOpVisitor(vueScopedFunctionSource);
+    transformWithLightningCssNoOpVisitor(deepSlottedGlobalSelectorSource);
   });
 
   bench("lightningcss nested at-rules", () => {
@@ -78,19 +73,15 @@ describe("lightningcss baseline: no-op visitor throughput", () => {
     transformWithLightningCssNoOpVisitor(animationScopedSource);
   });
 
-  bench("lightningcss logical wrappers", () => {
-    transformWithLightningCssNoOpVisitor(logicalWrapperScopedSource);
+  bench("lightningcss selectors that wrap :deep()", () => {
+    transformWithLightningCssNoOpVisitor(wrappedDeepSelectorScopedSource);
   });
 
   bench("lightningcss mixed realistic styles", () => {
     transformWithLightningCssNoOpVisitor(mixedRealisticScopedSource);
   });
 
-  bench("lightningcss nested :deep() / :slotted() selectors inside at-rules", () => {
-    transformWithLightningCssNoOpVisitor(nestedAtRuleCarrierScopedSource);
-  });
-
-  bench("lightningcss animation var() fallbacks and vendor-prefixed keyframes", () => {
-    transformWithLightningCssNoOpVisitor(animationFallbackScopedSource);
+  bench("lightningcss nested at-rules with :slotted() and wrapped :deep()", () => {
+    transformWithLightningCssNoOpVisitor(nestedWrappedDeepSlottedSelectorScopedSource);
   });
 });

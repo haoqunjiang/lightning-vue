@@ -16,6 +16,15 @@ export const simpleScopedSource = Array.from(
   (_, index) => `.card-${index} .title-${index}:where(:hover) > * { color: red; }`,
 ).join("\n");
 
+export const deepSlottedGlobalSelectorSource = Array.from({ length: 40 }, (_, index) =>
+  [
+    `.root-${index} :deep(.inner-${index} .copy-${index}) { color: red; }`,
+    `.root-${index} :slotted(.slot-${index} .leaf-${index}) { color: blue; }`,
+    `.root-${index} :deep(.branch-${index}) { color: green; }`,
+    `.root-${index} :global(.external-${index} .leaf-${index}) { color: black; }`,
+  ].join("\n"),
+).join("\n");
+
 export const nestedSelectorScopedSource = Array.from(
   { length: 40 },
   (_, index) =>
@@ -29,32 +38,6 @@ export const nestedSelectorScopedSource = Array.from(
   }
   > .meta-${index} {
     color: black;
-  }
-}`,
-).join("\n");
-
-export const vueScopedFunctionSource = Array.from({ length: 40 }, (_, index) =>
-  [
-    `.root-${index} :deep(.inner-${index} .copy-${index}) { color: red; }`,
-    `.root-${index} :slotted(.slot-${index} .leaf-${index}) { color: blue; }`,
-    `:is(.root-${index} :deep(.branch-${index})) { color: green; }`,
-    `.root-${index} :global(.external-${index} .leaf-${index}) { color: black; }`,
-  ].join("\n"),
-).join("\n");
-
-export const nestedAtRuleScopedSource = Array.from(
-  { length: 40 },
-  (_, index) =>
-    `.card-${index} {
-  color: red;
-  @media (max-width: 800px) {
-    color: blue;
-  }
-  @supports (display: grid) {
-    display: grid;
-  }
-  @container card-${index} (inline-size > 30rem) {
-    color: green;
   }
 }`,
 ).join("\n");
@@ -75,33 +58,29 @@ export const animationScopedSource = Array.from({ length: 20 }, (_, index) =>
   ].join("\n"),
 ).join("\n");
 
-export const logicalWrapperScopedSource = Array.from({ length: 20 }, (_, index) =>
+export const nestedAtRuleScopedSource = Array.from(
+  { length: 40 },
+  (_, index) =>
+    `.card-${index} {
+  color: red;
+  @media (max-width: 800px) {
+    color: blue;
+  }
+  @supports (display: grid) {
+    display: grid;
+  }
+  @container card-${index} (inline-size > 30rem) {
+    color: green;
+  }
+}`,
+).join("\n");
+
+export const wrappedDeepSelectorScopedSource = Array.from({ length: 20 }, (_, index) =>
   [
     `:not(.foo-${index} :deep(.bar-${index})) { color: red; }`,
     `:has(.foo-${index} :deep(.bar-${index})) { color: blue; }`,
     `:not(:deep(.foo-${index})) .bar-${index} { color: green; }`,
     `.card-${index} :is(.header-${index} :deep(.icon-${index})) { color: black; }`,
-  ].join("\n"),
-).join("\n");
-
-export const nestedAtRuleCarrierScopedSource = Array.from({ length: 20 }, (_, index) =>
-  [
-    `:slotted(.slot-${index}) {
-  @media (max-width: 800px) {
-    .leaf-${index} { color: red; }
-  }
-  @supports (display: grid) {
-    .grid-${index} { color: blue; }
-  }
-  @container card-${index} (inline-size > 30rem) {
-    .item-${index} { color: green; }
-  }
-}`,
-    `:not(:deep(.branch-${index})) {
-  @media print {
-    .copy-${index} { color: purple; }
-  }
-}`,
   ].join("\n"),
 ).join("\n");
 
@@ -127,18 +106,23 @@ export const mixedRealisticScopedSource = Array.from({ length: 20 }, (_, index) 
   ].join("\n"),
 ).join("\n");
 
-export const animationFallbackScopedSource = Array.from({ length: 20 }, (_, index) =>
+export const nestedWrappedDeepSlottedSelectorScopedSource = Array.from({ length: 20 }, (_, index) =>
   [
-    `.anim-name-${index} { animation-name: var(--anim-${index}, fade-${index}); }`,
-    `.anim-short-${index} { animation: var(--anim-${index}, fade-${index}) 1s linear; }`,
-    `.anim-webkit-${index} { -webkit-animation: var(--anim-${index}, fade-${index}) 1s linear; }`,
-    `@keyframes fade-${index} {
-  from { opacity: 0; }
-  to { opacity: 1; }
+    `:slotted(.slot-${index}) {
+  @media (max-width: 800px) {
+    .leaf-${index} { color: red; }
+  }
+  @supports (display: grid) {
+    .grid-${index} { color: blue; }
+  }
+  @container card-${index} (inline-size > 30rem) {
+    .item-${index} { color: green; }
+  }
 }`,
-    `@-webkit-keyframes fade-${index} {
-  from { opacity: 0; }
-  to { opacity: 1; }
+    `:not(:deep(.branch-${index})) {
+  @media print {
+    .copy-${index} { color: purple; }
+  }
 }`,
   ].join("\n"),
 ).join("\n");

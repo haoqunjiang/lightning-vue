@@ -102,7 +102,7 @@ defineProps<{
   }
 
   &.pulse {
-    animation: var(--demoPulse, tile-pulse) 2s ease-in-out infinite;
+    animation: tile-pulse 2s ease-in-out infinite;
   }
 }
 

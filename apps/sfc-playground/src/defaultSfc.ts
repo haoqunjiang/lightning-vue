@@ -129,7 +129,7 @@ const tone = computed(() => {
     }
 
     &.accent {
-      animation: var(--card-pulse, spotlight) 2.4s ease-in-out infinite;
+      animation: spotlight 2.4s ease-in-out infinite;
     }
 
     strong {

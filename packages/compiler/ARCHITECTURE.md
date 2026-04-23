@@ -17,7 +17,7 @@ It is a **source-first compiler pipeline** with three kinds of work:
 
 1. cheap source analysis and source rewrites
 2. a Lightning CSS transform
-3. a narrow post-transform fixup stage
+3. an optional post-transform animation cleanup stage
 
 That shape is more complex than a single AST pass, but it consistently
 benchmarks better for Vue SFC styles.
@@ -76,8 +76,8 @@ flowchart TD
   F -- no --> H
   G --> H[Try source-level selector scoping]
   H --> I[Lightning CSS transform<br/>lower nesting, CSS modules, serialize]
-  I --> J{scoped local keyframes?}
-  J -- yes --> K[Rewrite normalized animation declarations]
+  I --> J{local keyframes renamed?}
+  J -- yes --> K[Rewrite normalized animation references]
   J -- no --> L
   K --> L[Assemble final result]
 ```
@@ -97,8 +97,8 @@ transform.
 ### 1. Validate and Preprocess
 
 `compileStyle.ts` first validates the supported option surface. This package is
-intentionally strict: unsupported PostCSS-specific features fail fast instead of
-silently falling back.
+strict: unsupported PostCSS-specific features fail fast. There is no silent
+fallback.
 
 If the style uses Sass, Less, or Stylus, preprocessing runs before any CSS
 analysis so the rest of the pipeline always sees plain CSS.
@@ -197,8 +197,8 @@ Those plans cover four decisions:
 - which context child style rules and child at-rules inherit
 - whether declaration-only nested at-rules must be hoisted out
 
-This stage is intentionally source-based because it benchmarks better than the
-AST-heavy alternative for carrier-heavy nested styles.
+This stage stays source-based because it benchmarks better than the AST-heavy
+alternative for carrier-heavy nested styles.
 
 ## The Scoped Selector Model
 
@@ -461,17 +461,16 @@ them debugger-only concepts:
 - `scopedSelector.trace.spec.ts`
   traces selector expansion, placement, cleanup, and final scoped selectors
 
-These traces are intentionally narrower than the full implementation details.
-They exist to keep the phase boundaries and cross-phase state small enough to
-explain.
+These traces cover the phase boundaries and cross-phase state. They do not try
+to mirror every implementation detail.
 
 For interactive debugging, the scoped-selector and nesting traces are also
 available from the compiler's debug surface:
 
 - `@lightning-vue/compiler/debug`
 
-The internal IR playground consumes that same debug surface rather than
-re-implementing the tracing logic.
+The internal IR playground uses that same debug surface, so the tracing logic
+stays in one place.
 
 ## What Lightning CSS Is Responsible For
 
@@ -483,7 +482,7 @@ After source rewrites, Lightning CSS is used for the parts it is good at:
 - CSS Modules compilation
 - any remaining selector visitor work when source scoping did not finish it
 
-The style visitor is intentionally small. See
+The style visitor stays small. See
 [visitor.ts](./src/style/lightningcss/visitor.ts).
 
 The package does **not** try to encode all Vue semantics inside the Lightning
@@ -491,19 +490,25 @@ CSS visitor. That approach was simpler conceptually, but slower in practice.
 
 ## Why Animation Uses a Different Strategy
 
-Animation/keyframe handling is the main case where the package leans more on
-Lightning CSS instead of less.
+Animation/keyframe handling is the main case where the package relies more on
+Lightning CSS.
 
-For scoped local keyframes:
+When scoped local keyframes are renamed:
 
 - the source analysis records the keyframe rename map
-- Lightning CSS does the normal declaration parsing and serialization
-- the package then performs a narrow post-transform rewrite in
+- Lightning CSS does the expensive parsing and normalization first
+- the package then plans and applies a narrow post-transform source rewrite in
   [scoped/animation/](./src/style/lightningcss/scoped/animation)
+- that rewrite has two small stages:
+  - a small planning pass that finds explicit rewrite spans in normalized CSS
+  - a small apply pass that patches either a string or a `MagicString`
+- [debug/animation.ts](./src/debug/animation.ts) shows that stage directly
+- the compile-session trace shows its before/after boundary
 
-This works well because animation declarations benefit from Lightning CSS’s
-normalization. Unlike nested selector semantics, preserving raw authored source
-shape here was not worth the complexity.
+Animation declarations benefit from Lightning CSS normalization. Unlike nested
+selector semantics, preserving raw authored source shape here was not worth the
+complexity. The remaining rewrite stays small because it only tracks normalized
+keyframe names.
 
 ## Why This Package Is Not Simpler
 
@@ -512,9 +517,7 @@ If simplicity were the only goal, we would likely choose one of these designs:
 - everything in a Lightning CSS AST visitor
 - everything as source-to-source rewriting
 
-The package does neither.
-
-It intentionally uses a hybrid:
+The package does neither. It uses a hybrid:
 
 - source-based routing and rewriting on the hot path
 - Lightning CSS for parsing, lowering, serialization, and CSS Modules
@@ -551,7 +554,7 @@ Shared compile-session stages used by both the Node and browser entrypoints:
 - `transform.ts`
   transform-plan derivation, source scoping, and Lightning CSS transform setup
 - `finalize.ts`
-  post-transform animation fixup and public result assembly
+  animation cleanup and public result assembly
 - `modules.ts`
   CSS modules result normalization
 

@@ -53,7 +53,7 @@ export const compileSessionTraceCases: CompileSessionTraceCase[] = [
     },
   },
   {
-    title: "css vars and animation finalize pass",
+    title: "css vars with renamed keyframes",
     options: {
       scoped: true,
       source: `.card {
@@ -88,8 +88,8 @@ export const compileSessionTraceCases: CompileSessionTraceCase[] = [
  * 4. transform plan
  * 5. final public compile result
  *
- * The goal is not to mirror every helper call. It is to keep the important
- * phase contracts observable so refactors can be judged against something more
+ * This trace does not mirror every helper call. It keeps the important phase
+ * contracts observable so refactors can be judged against something more
  * concrete than “this still feels right”.
  */
 export async function traceCompileSession(

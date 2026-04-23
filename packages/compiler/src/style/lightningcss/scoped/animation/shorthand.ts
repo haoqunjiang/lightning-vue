@@ -1,5 +1,5 @@
 import { splitTopLevelSegments, splitTopLevelWhitespace } from "./scan";
-import { isVarFunctionCall, rewriteAnimationNameValue } from "./names";
+import { rewriteAnimationNameValue } from "./names";
 
 export function rewriteAnimationShorthandValue(
   value: string,
@@ -19,30 +19,15 @@ function rewriteAnimationShorthandComponent(
     return value;
   }
 
-  let changed = false;
   const nextTokens = tokens.slice();
-  for (let index = 0; index < tokens.length; index++) {
-    const token = tokens[index];
-    if (!isVarFunctionCall(token)) {
-      continue;
-    }
-
-    const rewrittenToken = rewriteAnimationNameValue(token, keyframes);
-    if (rewrittenToken !== token) {
-      nextTokens[index] = rewrittenToken;
-      changed = true;
-    }
-  }
-
   // On normalized Lightning CSS output, explicit animation names are serialized
-  // in the final token position, while dynamic names can still appear inside
-  // var(...) calls anywhere in the shorthand.
+  // in the final token position.
   const lastTokenIndex = tokens.length - 1;
   const rewrittenLastToken = rewriteAnimationNameValue(nextTokens[lastTokenIndex], keyframes);
   if (rewrittenLastToken !== nextTokens[lastTokenIndex]) {
     nextTokens[lastTokenIndex] = rewrittenLastToken;
-    changed = true;
+    return nextTokens.join(" ");
   }
 
-  return changed ? nextTokens.join(" ") : value;
+  return value;
 }

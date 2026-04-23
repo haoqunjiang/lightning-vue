@@ -2,28 +2,39 @@ import { bench, describe } from "vitest";
 import { Features } from "lightningcss";
 import { createLightningCssStyleVisitor } from "../src";
 import { analyzeLightningCssStyle } from "../src/style/lightningcss/analysis";
-import { rewriteNormalizedAnimationDeclarations } from "../src/style/lightningcss/scoped/animation";
+import {
+  applyPlannedAnimationReferenceRewrites,
+  planNormalizedAnimationReferenceRewrites,
+  rewriteNormalizedAnimationReferences,
+} from "../src/style/lightningcss/scoped/animation";
 import { normalizeNestedStyleBlocks } from "../src/style/lightningcss/nesting/normalize";
 import { scopeLightningCssSource } from "../src/style/lightningcss/scoped/source";
 import {
-  animationFallbackScopedSource,
   animationScopedSource,
-  logicalWrapperScopedSource,
+  deepSlottedGlobalSelectorSource,
   loweredNormalizedNestedAtRuleSource,
   loweredNormalizedNestedSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleCarrierScopedSource,
   nestedAtRuleScopedSource,
   nestedSelectorScopedSource,
+  nestedWrappedDeepSlottedSelectorScopedSource,
   normalizedNestedAtRuleSource,
   normalizedNestedSelectorSource,
   simpleScopedSource,
   transformWithLightningCss,
-  vueScopedFunctionSource,
   warmupCompileBenchSuite,
+  wrappedDeepSelectorScopedSource,
 } from "./compileStyleBenchShared";
 
 warmupCompileBenchSuite();
+const animationKeyframes = analyzeLightningCssStyle(
+  animationScopedSource,
+  "data-v-bench",
+).keyframes;
+const plannedAnimationRewrites = planNormalizedAnimationReferenceRewrites(
+  animationScopedSource,
+  animationKeyframes,
+);
 
 describe("lightningcss micro: transform breakdown", () => {
   bench("transform only simple selectors", () => {
@@ -51,7 +62,7 @@ describe("lightningcss micro: source preparation", () => {
   });
 
   bench("analyze style :deep() / :slotted() / :global() selectors", () => {
-    analyzeLightningCssStyle(vueScopedFunctionSource, "data-v-bench");
+    analyzeLightningCssStyle(deepSlottedGlobalSelectorSource, "data-v-bench");
   });
 
   bench("scope source simple selectors", () => {
@@ -59,7 +70,7 @@ describe("lightningcss micro: source preparation", () => {
   });
 
   bench("scope source :deep() / :slotted() / :global() selectors", () => {
-    scopeLightningCssSource(vueScopedFunctionSource, "data-v-bench", true);
+    scopeLightningCssSource(deepSlottedGlobalSelectorSource, "data-v-bench", true);
   });
 });
 
@@ -68,34 +79,32 @@ describe("lightningcss micro: animation finalization", () => {
     analyzeLightningCssStyle(animationScopedSource, "data-v-bench");
   });
 
-  bench("rewrite normalized animation declarations", () => {
-    rewriteNormalizedAnimationDeclarations(
-      animationScopedSource,
-      analyzeLightningCssStyle(animationScopedSource, "data-v-bench").keyframes,
-    );
+  bench("plan normalized animation reference rewrites", () => {
+    planNormalizedAnimationReferenceRewrites(animationScopedSource, animationKeyframes);
   });
 
-  bench("rewrite normalized animation var() fallbacks and vendor-prefixed keyframes", () => {
-    rewriteNormalizedAnimationDeclarations(
-      animationFallbackScopedSource,
-      analyzeLightningCssStyle(animationFallbackScopedSource, "data-v-bench").keyframes,
-    );
+  bench("apply planned animation reference rewrites", () => {
+    applyPlannedAnimationReferenceRewrites(animationScopedSource, plannedAnimationRewrites);
+  });
+
+  bench("rewrite normalized animation references", () => {
+    rewriteNormalizedAnimationReferences(animationScopedSource, animationKeyframes);
   });
 });
 
 describe("lightningcss micro: transform breakdown with :deep() / :slotted() / :global() selectors", () => {
   bench("transform only :deep() / :slotted() / :global() selectors", () => {
-    transformWithLightningCss(vueScopedFunctionSource);
+    transformWithLightningCss(deepSlottedGlobalSelectorSource);
   });
 
   bench("transform + no-op visitor :deep() / :slotted() / :global() selectors", () => {
-    transformWithLightningCss(vueScopedFunctionSource, { visitor: {} });
+    transformWithLightningCss(deepSlottedGlobalSelectorSource, { visitor: {} });
   });
 
   bench("transform + scoped visitor :deep() / :slotted() / :global() selectors", () => {
-    transformWithLightningCss(vueScopedFunctionSource, {
+    transformWithLightningCss(deepSlottedGlobalSelectorSource, {
       visitor: createLightningCssStyleVisitor({
-        analysis: analyzeLightningCssStyle(vueScopedFunctionSource, "data-v-bench"),
+        analysis: analyzeLightningCssStyle(deepSlottedGlobalSelectorSource, "data-v-bench"),
         id: "data-v-bench",
         scoped: true,
       }),
@@ -103,19 +112,19 @@ describe("lightningcss micro: transform breakdown with :deep() / :slotted() / :g
   });
 });
 
-describe("lightningcss micro: transform breakdown with logical wrappers", () => {
-  bench("transform only logical wrapper selectors", () => {
-    transformWithLightningCss(logicalWrapperScopedSource);
+describe("lightningcss micro: transform breakdown with selectors that wrap :deep()", () => {
+  bench("transform only selectors that wrap :deep()", () => {
+    transformWithLightningCss(wrappedDeepSelectorScopedSource);
   });
 
-  bench("transform + no-op visitor logical wrapper selectors", () => {
-    transformWithLightningCss(logicalWrapperScopedSource, { visitor: {} });
+  bench("transform + no-op visitor selectors that wrap :deep()", () => {
+    transformWithLightningCss(wrappedDeepSelectorScopedSource, { visitor: {} });
   });
 
-  bench("transform + scoped visitor logical wrapper selectors", () => {
-    transformWithLightningCss(logicalWrapperScopedSource, {
+  bench("transform + scoped visitor selectors that wrap :deep()", () => {
+    transformWithLightningCss(wrappedDeepSelectorScopedSource, {
       visitor: createLightningCssStyleVisitor({
-        analysis: analyzeLightningCssStyle(logicalWrapperScopedSource, "data-v-bench"),
+        analysis: analyzeLightningCssStyle(wrappedDeepSelectorScopedSource, "data-v-bench"),
         id: "data-v-bench",
         scoped: true,
       }),
@@ -123,21 +132,24 @@ describe("lightningcss micro: transform breakdown with logical wrappers", () => 
   });
 });
 
-describe("lightningcss micro: transform breakdown with nested :deep() / :slotted() selectors inside at-rules", () => {
-  bench("transform only nested :deep() / :slotted() selectors inside at-rules", () => {
-    transformWithLightningCss(nestedAtRuleCarrierScopedSource);
+describe("lightningcss micro: transform breakdown with nested at-rules that use :slotted() and wrapped :deep()", () => {
+  bench("transform only nested at-rules with :slotted() and wrapped :deep()", () => {
+    transformWithLightningCss(nestedWrappedDeepSlottedSelectorScopedSource);
   });
 
-  bench("transform + include nesting nested :deep() / :slotted() selectors inside at-rules", () => {
-    transformWithLightningCss(nestedAtRuleCarrierScopedSource, {
+  bench("transform + include nesting nested at-rules with :slotted() and wrapped :deep()", () => {
+    transformWithLightningCss(nestedWrappedDeepSlottedSelectorScopedSource, {
       include: Features.Nesting,
     });
   });
 
-  bench("transform + scoped visitor nested :deep() / :slotted() selectors inside at-rules", () => {
-    transformWithLightningCss(nestedAtRuleCarrierScopedSource, {
+  bench("transform + scoped visitor nested at-rules with :slotted() and wrapped :deep()", () => {
+    transformWithLightningCss(nestedWrappedDeepSlottedSelectorScopedSource, {
       visitor: createLightningCssStyleVisitor({
-        analysis: analyzeLightningCssStyle(nestedAtRuleCarrierScopedSource, "data-v-bench"),
+        analysis: analyzeLightningCssStyle(
+          nestedWrappedDeepSlottedSelectorScopedSource,
+          "data-v-bench",
+        ),
         id: "data-v-bench",
         scoped: true,
       }),

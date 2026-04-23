@@ -18,3 +18,10 @@ export {
   formatCompileSessionTrace,
   traceCompileSession,
 } from "./debug/compileSession";
+
+export type { AnimationRewriteTrace, AnimationRewriteTraceCase } from "./debug/animation";
+export {
+  animationRewriteTraceCases,
+  formatAnimationRewriteTrace,
+  traceAnimationRewrite,
+} from "./debug/animation";

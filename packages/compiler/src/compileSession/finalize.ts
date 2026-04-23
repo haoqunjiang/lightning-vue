@@ -1,15 +1,15 @@
 import type { SFCStyleCompileResults } from "@vue/compiler-sfc";
 import type { RawSourceMap } from "@vue/compiler-core";
 import {
-  rewriteNormalizedAnimationDeclarations,
-  rewriteNormalizedAnimationDeclarationsWithMap,
+  rewriteNormalizedAnimationReferences,
+  rewriteNormalizedAnimationReferencesWithMap,
 } from "../style/lightningcss/scoped/animation";
 import { normalizeLightningCssModules } from "./modules";
 import type { CompileSession } from "./types";
 
 const textDecoder = new TextDecoder();
 
-function rewriteAnimationDeclarationsIfNeeded(
+function rewriteAnimationReferencesIfNeeded(
   code: string,
   map: RawSourceMap | undefined,
   session: CompileSession,
@@ -28,7 +28,7 @@ function rewriteAnimationDeclarationsIfNeeded(
   }
 
   if (context.sourceMap) {
-    return rewriteNormalizedAnimationDeclarationsWithMap(
+    return rewriteNormalizedAnimationReferencesWithMap(
       code,
       context.filename,
       analysis.keyframes,
@@ -36,10 +36,7 @@ function rewriteAnimationDeclarationsIfNeeded(
     );
   }
 
-  return {
-    code: rewriteNormalizedAnimationDeclarations(code, analysis.keyframes).code,
-    map,
-  };
+  return rewriteNormalizedAnimationReferences(code, analysis.keyframes);
 }
 
 export function finalizeCompileFailure(session: CompileSession): SFCStyleCompileResults {
@@ -58,7 +55,7 @@ export function finalizeCompileSuccess(
   session: CompileSession,
 ): SFCStyleCompileResults {
   const { context, state } = session;
-  const postTransform = rewriteAnimationDeclarationsIfNeeded(
+  const postTransform = rewriteAnimationReferencesIfNeeded(
     textDecoder.decode(result.code),
     result.map ? JSON.parse(textDecoder.decode(result.map)) : undefined,
     session,

@@ -43,6 +43,11 @@
       "import": "./dist/debug.mjs",
       "require": "./dist/debug.cjs"
     },
+    "./debug/animation": {
+      "types": "./dist/debug/animation.d.mts",
+      "import": "./dist/debug/animation.mjs",
+      "require": "./dist/debug/animation.cjs"
+    },
     "./debug/nesting": {
       "types": "./dist/debug/nesting.d.mts",
       "import": "./dist/debug/nesting.mjs",
