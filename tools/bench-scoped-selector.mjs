@@ -1,10 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 
-const repoRoot = process.cwd();
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const compilerRoot = resolve(repoRoot, "packages/compiler");
+const vpBin = resolve(repoRoot, "node_modules/.bin", process.platform === "win32" ? "vp.cmd" : "vp");
 const defaultBenchFiles = [
   "bench/compileStyle.compare.bench.ts",
   "bench/compileStyle.internal.bench.ts",
@@ -20,12 +22,7 @@ const tempDir = mkdtempSync(join(tmpdir(), "lightning-vue-bench-"));
 try {
   const reports = [];
   for (let runIndex = 0; runIndex < runCount; runIndex++) {
-    const outputPath = join(tempDir, `run-${runIndex + 1}.json`);
-    execFileSync("vp", ["test", "bench", ...benchFiles, "--outputJson", outputPath, "--run"], {
-      cwd: compilerRoot,
-      stdio: "inherit",
-    });
-    reports.push(JSON.parse(readFileSync(outputPath, "utf8")));
+    reports.push(...runBenchPass(benchFiles, runIndex, runCount));
   }
 
   const aggregate = aggregateReports(reports, benchFiles, runCount);
@@ -81,6 +78,37 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+function runBenchPass(benchFiles, runIndex, runCount) {
+  console.log(`Running benchmark pass ${runIndex + 1}/${runCount}...`);
+  return benchFiles.map((benchFile, benchIndex) =>
+    runBenchFile(benchFile, runIndex, runCount, benchIndex, benchFiles.length),
+  );
+}
+
+function runBenchFile(benchFile, runIndex, runCount, benchIndex, benchFileCount) {
+  const outputPath = join(
+    tempDir,
+    `run-${runIndex + 1}-${benchIndex + 1}-${benchFile.replaceAll(/[\\/]/g, "_")}.json`,
+  );
+  console.log(`  [${benchIndex + 1}/${benchFileCount}] ${benchFile}`);
+  try {
+    execFileSync(vpBin, ["test", "bench", benchFile, "--outputJson", outputPath, "--run"], {
+      cwd: compilerRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stdout) {
+      process.stdout.write(error.stdout);
+    }
+    if (error.stderr) {
+      process.stderr.write(error.stderr);
+    }
+    throw error;
+  }
+  return JSON.parse(readFileSync(outputPath, "utf8"));
 }
 
 function aggregateReports(reports, benchFiles, runCount) {
@@ -172,9 +200,14 @@ function printSummary(aggregate, baseline, focusPattern) {
     ]),
   );
 
-  console.log("");
-  console.log("Benchmarks by group (median time):");
-  printGroupedBenchmarkSummary(filtered, baselineMap);
+  if (isHeadroomBenchRun(aggregate.benchFiles)) {
+    printLightningCssHeadroomSummary(filtered);
+  } else {
+    console.log("");
+    console.log("Benchmarks by group (median time):");
+    printGroupedBenchmarkSummary(filtered, baselineMap);
+    printLightningCssHeadroomSummary(filtered);
+  }
 
   if (!baseline) {
     return;
@@ -260,6 +293,110 @@ function printGroupedBenchmarkSummary(benchmarks, baselineMap) {
   }
 }
 
+function isHeadroomBenchRun(benchFiles) {
+  return (
+    benchFiles.length === 2 &&
+    benchFiles.includes("bench/lightningBaseline.bench.ts") &&
+    benchFiles.includes("bench/compileStyle.internal.bench.ts")
+  );
+}
+
+function printLightningCssHeadroomSummary(benchmarks) {
+  const rawEngineByScenario = new Map();
+  const noOpVisitorByScenario = new Map();
+  const groups = new Map();
+
+  for (const benchmark of benchmarks) {
+    const scenario = getHeadroomScenarioLabel(benchmark);
+    if (!scenario) {
+      continue;
+    }
+
+    const bucket = groups.get(scenario.category) ?? [];
+    bucket.push({
+      benchmark,
+      scenario: scenario.label,
+    });
+    groups.set(scenario.category, bucket);
+
+    if (scenario.category === "lightningcss baseline: raw engine throughput") {
+      rawEngineByScenario.set(scenario.label, benchmark);
+    } else if (scenario.category === "lightningcss baseline: no-op visitor throughput") {
+      noOpVisitorByScenario.set(scenario.label, benchmark);
+    }
+  }
+
+  const headroomGroups = [];
+  for (const [category, members] of groups) {
+    if (
+      category !== "compileStyle internal: lightningcss end to end" &&
+      category !== "compileStyle internal: normalized source path"
+    ) {
+      continue;
+    }
+
+    const rows = members
+      .map(({ benchmark, scenario }) => {
+        const rawEngine = rawEngineByScenario.get(scenario);
+        const noOpVisitor = noOpVisitorByScenario.get(scenario);
+        if (!rawEngine || !noOpVisitor) {
+          return null;
+        }
+
+        return {
+          label: scenario,
+          benchmark,
+          rawRetention: benchmark.hz / rawEngine.hz,
+          rawSlowdown: rawEngine.hz / benchmark.hz,
+          rawEngine,
+          noOpRetention: benchmark.hz / noOpVisitor.hz,
+          noOpSlowdown: noOpVisitor.hz / benchmark.hz,
+          noOpVisitor,
+        };
+      })
+      .filter(Boolean)
+      .sort((left, right) => left.noOpRetention - right.noOpRetention);
+
+    if (rows.length) {
+      headroomGroups.push([category, rows]);
+    }
+  }
+
+  if (!headroomGroups.length) {
+    return;
+  }
+
+  console.log("");
+  console.log("Compiler headroom:");
+  console.log(
+    "  Each row uses the same corpus three ways: raw Lightning CSS, Lightning CSS with a no-op visitor, and the full compiler pipeline.",
+  );
+  console.log(
+    "  The no-op visitor numbers are a secondary check for Rust-to-JavaScript hook overhead, because some fast paths finish before the final Lightning visitor stage.",
+  );
+  for (const [category, rows] of headroomGroups) {
+    console.log(`- ${category}`);
+    for (const row of rows) {
+      console.log(`  - ${row.label}`);
+      console.log(
+        `    raw lightningcss: ${highlightMetric(formatHertz(row.rawEngine.hz))} | no-op visitor: ${highlightMetric(formatHertz(
+          row.noOpVisitor.hz,
+        ))} | full compiler: ${highlightMetric(formatHertz(row.benchmark.hz))}`,
+      );
+      console.log(
+        `    no-op visitor overhead: ${highlightMetric(
+          formatPercent(row.noOpVisitor.hz / row.rawEngine.hz),
+        )} retained, ${highlightMetric(
+          formatMultiplier(row.rawEngine.hz / row.noOpVisitor.hz),
+        )} slower`,
+      );
+      console.log(
+        `    compiler overhead above the hook baseline: ${highlightMetric(formatPercent(row.noOpRetention))} retained, ${highlightMetric(formatMultiplier(row.noOpSlowdown))} slower`,
+      );
+    }
+  }
+}
+
 function groupDeltaEntriesBySuite(changed) {
   const groups = new Map();
   for (const entry of changed) {
@@ -305,12 +442,69 @@ function printGroupedDeltaSummary(changed) {
   }
 }
 
+function getHeadroomScenarioLabel(benchmark) {
+  const { suite, subgroup } = splitGroupLabel(benchmark);
+
+  if (suite === "lightningcss baseline: raw engine throughput") {
+    return benchmark.name.startsWith("lightningcss ")
+      ? {
+          category: suite,
+          label: benchmark.name.slice("lightningcss ".length),
+        }
+      : null;
+  }
+
+  if (suite === "lightningcss baseline: no-op visitor throughput") {
+    return benchmark.name.startsWith("lightningcss ")
+      ? {
+          category: suite,
+          label: benchmark.name.slice("lightningcss ".length),
+        }
+      : null;
+  }
+
+  if (suite === "compileStyle internal: lightningcss end to end") {
+    return benchmark.name.startsWith("lightningcss ")
+      ? {
+          category: suite,
+          label: benchmark.name.slice("lightningcss ".length),
+        }
+      : null;
+  }
+
+  if (suite === "compileStyle internal: normalized source path") {
+    return benchmark.name.startsWith("lightningcss ") &&
+      benchmark.name.endsWith(" (normalized source path)")
+      ? {
+          category: suite,
+          label: benchmark.name
+            .slice("lightningcss ".length)
+            .replace(/ \(normalized source path\)$/, ""),
+        }
+      : null;
+  }
+
+  return null;
+}
+
 function formatMilliseconds(value) {
   return `${value.toFixed(4)} ms`;
 }
 
 function formatHertz(value) {
   return `${value.toFixed(2)} hz`;
+}
+
+function formatPercent(value) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function formatMultiplier(value) {
+  return `${value.toFixed(2)}x`;
+}
+
+function highlightMetric(value) {
+  return `\x1b[1m${value}\x1b[0m`;
 }
 
 function formatPercentDelta(current, baseline, lowerIsBetter) {

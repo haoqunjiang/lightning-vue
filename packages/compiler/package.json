@@ -69,6 +69,7 @@
     "test": "vp test run",
     "bench:sample": "vp test bench bench/compileStyle.compare.bench.ts bench/compileStyle.internal.bench.ts bench/compileStyle.micro.bench.ts bench/scopedSelector.bench.ts",
     "bench:compare:sample": "vp test bench bench/compileStyle.compare.bench.ts",
+    "bench:headroom:sample": "node ../../tools/bench-scoped-selector.mjs --bench bench/lightningBaseline.bench.ts --bench bench/compileStyle.internal.bench.ts --runs 1",
     "bench:internal:sample": "vp test bench bench/compileStyle.internal.bench.ts",
     "bench:micro:sample": "vp test bench bench/compileStyle.micro.bench.ts bench/scopedSelector.bench.ts",
     "bench:scoped:sample": "vp test bench bench/scopedSelector.bench.ts",

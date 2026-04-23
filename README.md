@@ -132,6 +132,18 @@ different CSS.
 pnpm bench:internal
 ```
 
+- run the raw Lightning CSS baseline together with the end-to-end compiler
+  suite:
+
+```bash
+pnpm bench:headroom
+```
+
+- `bench:headroom` compares the full compiler pipeline against raw Lightning
+  CSS, Lightning CSS with a no-op visitor, and the full compiler pipeline on
+  the same corpora. That makes it easier to separate hook overhead from the
+  cost of our own compiler logic.
+
 - run only the microbenchmarks:
 
 ```bash
@@ -143,6 +155,7 @@ pnpm bench:micro
 ```bash
 pnpm bench:sample
 pnpm bench:compare:sample
+pnpm bench:headroom:sample
 pnpm bench:internal:sample
 pnpm bench:micro:sample
 ```
