@@ -7,6 +7,7 @@ import {
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
   nestedAtRuleScopedSource,
+  nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
   simpleScopedSource,
@@ -23,6 +24,10 @@ describe("compileStyle internal: lightningcss end to end", () => {
 
   bench("lightningcss nested at-rules", () => {
     compileWith(compileStyleWithLightningCss, nestedAtRuleScopedSource);
+  });
+
+  bench("lightningcss mixed nested selectors and at-rules", () => {
+    compileWith(compileStyleWithLightningCss, nestedMixedScopedSource);
   });
 
   bench("lightningcss selectors that wrap :deep()", () => {
@@ -52,6 +57,10 @@ describe("compileStyle internal: lightningcss end to end", () => {
 describe("compileStyle internal: normalized source path", () => {
   bench("lightningcss nested at-rules (normalized source path)", () => {
     compileWithLightningCssUsingNormalizedNestedScoping(nestedAtRuleScopedSource);
+  });
+
+  bench("lightningcss mixed nested selectors and at-rules (normalized source path)", () => {
+    compileWithLightningCssUsingNormalizedNestedScoping(nestedMixedScopedSource);
   });
 
   bench("lightningcss nested selectors (normalized source path)", () => {

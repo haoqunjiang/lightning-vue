@@ -7,6 +7,7 @@ import {
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
   nestedAtRuleScopedSource,
+  nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
   simpleScopedSource,
@@ -64,6 +65,16 @@ describe("compileStyle comparison: parity cases", () => {
 
     bench("postcss nested at-rules", () => {
       compileWith(compileStyle, nestedAtRuleScopedSource);
+    });
+  });
+
+  describe("mixed nested selectors and at-rules", () => {
+    bench("lightningcss mixed nested selectors and at-rules", () => {
+      compileWith(compileStyleWithLightningCss, nestedMixedScopedSource);
+    });
+
+    bench("postcss mixed nested selectors and at-rules", () => {
+      compileWith(compileStyle, nestedMixedScopedSource);
     });
   });
 });

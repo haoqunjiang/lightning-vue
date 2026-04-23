@@ -4,7 +4,7 @@ import {
   compileStyle as _compileStyleWithLightningCss,
   createLightningCssStyleVisitor,
 } from "../src";
-import { analyzeLightningCssStyle } from "../src/style/lightningcss/analysis";
+import { analyzeLightningCssStyle, hasNestedStructure } from "../src/style/lightningcss/analysis";
 import { normalizeNestedStyleBlocks } from "../src/style/lightningcss/nesting/normalize";
 import { scopeLightningCssSource } from "../src/style/lightningcss/scoped/source";
 
@@ -71,6 +71,29 @@ export const nestedAtRuleScopedSource = Array.from(
   }
   @container card-${index} (inline-size > 30rem) {
     color: green;
+  }
+}`,
+).join("\n");
+
+export const nestedMixedScopedSource = Array.from(
+  { length: 30 },
+  (_, index) =>
+    `.card-${index} {
+  color: red;
+  .title-${index} {
+    color: blue;
+  }
+  @media (max-width: 800px) {
+    color: green;
+    .meta-${index} {
+      color: black;
+    }
+  }
+  @supports (display: grid) {
+    display: grid;
+    .grid-${index} {
+      color: purple;
+    }
   }
 }`,
 ).join("\n");
@@ -166,7 +189,7 @@ export function compileWithLightningCssUsingNormalizedNestedScoping(source: stri
   );
 
   return transformWithLightningCss(scopedSource, {
-    include: analysis.hasNestedStyleRules ? Features.Nesting : undefined,
+    include: hasNestedStructure(analysis.nested) ? Features.Nesting : undefined,
     visitor: createLightningCssStyleVisitor({
       analysis,
       id: "data-v-bench",
@@ -186,6 +209,11 @@ export const normalizedNestedAtRuleSource = normalizeNestedStyleBlocks(
   "bench.css",
 ).code;
 
+export const normalizedNestedMixedSource = normalizeNestedStyleBlocks(
+  nestedMixedScopedSource,
+  "bench.css",
+).code;
+
 export const loweredNormalizedNestedSelectorSource = new TextDecoder().decode(
   transformWithLightningCss(normalizedNestedSelectorSource, {
     include: Features.Nesting,
@@ -194,6 +222,12 @@ export const loweredNormalizedNestedSelectorSource = new TextDecoder().decode(
 
 export const loweredNormalizedNestedAtRuleSource = new TextDecoder().decode(
   transformWithLightningCss(normalizedNestedAtRuleSource, {
+    include: Features.Nesting,
+  }),
+);
+
+export const loweredNormalizedNestedMixedSource = new TextDecoder().decode(
+  transformWithLightningCss(normalizedNestedMixedSource, {
     include: Features.Nesting,
   }),
 );

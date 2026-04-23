@@ -8,6 +8,7 @@ import {
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
   nestedAtRuleScopedSource,
+  nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
   simpleScopedSource,
@@ -39,6 +40,7 @@ describe("compileStyle compare benchmark labels", () => {
     ["animation keyframes", animationScopedSource],
     ["nested selectors", nestedSelectorScopedSource],
     ["nested at-rules", nestedAtRuleScopedSource],
+    ["mixed nested selectors and at-rules", nestedMixedScopedSource],
   ])("%s still matches after normalization", (_label, source) => {
     const { postcss, lightningcss } = compilePair(source);
     expect(lightningcss).toBe(postcss);

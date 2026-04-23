@@ -13,12 +13,15 @@ import {
   animationScopedSource,
   deepSlottedGlobalSelectorSource,
   loweredNormalizedNestedAtRuleSource,
+  loweredNormalizedNestedMixedSource,
   loweredNormalizedNestedSelectorSource,
   mixedRealisticScopedSource,
   nestedAtRuleScopedSource,
+  nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
   normalizedNestedAtRuleSource,
+  normalizedNestedMixedSource,
   normalizedNestedSelectorSource,
   simpleScopedSource,
   transformWithLightningCss,
@@ -279,5 +282,35 @@ describe("lightningcss micro: nested at-rule normalization", () => {
         scoped: true,
       }),
     });
+  });
+});
+
+describe("lightningcss micro: nested mixed normalization", () => {
+  bench("normalize mixed nested selectors and at-rules", () => {
+    normalizeNestedStyleBlocks(nestedMixedScopedSource, "bench.css");
+  });
+
+  bench("scope source normalized mixed nested selectors and at-rules", () => {
+    scopeLightningCssSource(normalizedNestedMixedSource, "data-v-bench", true);
+  });
+
+  bench("transform only mixed nested selectors and at-rules", () => {
+    transformWithLightningCss(nestedMixedScopedSource);
+  });
+
+  bench("transform + include nesting mixed nested selectors and at-rules", () => {
+    transformWithLightningCss(nestedMixedScopedSource, {
+      include: Features.Nesting,
+    });
+  });
+
+  bench("transform + include nesting normalized mixed nested selectors and at-rules", () => {
+    transformWithLightningCss(normalizedNestedMixedSource, {
+      include: Features.Nesting,
+    });
+  });
+
+  bench("scope source lowered normalized mixed nested selectors and at-rules", () => {
+    scopeLightningCssSource(loweredNormalizedNestedMixedSource, "data-v-bench", true);
   });
 });

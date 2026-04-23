@@ -4,6 +4,7 @@ import {
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
   nestedAtRuleScopedSource,
+  nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
   simpleScopedSource,
@@ -33,6 +34,10 @@ describe("lightningcss baseline: raw engine throughput", () => {
 
   bench("lightningcss nested at-rules", () => {
     transformWithLightningCss(nestedAtRuleScopedSource);
+  });
+
+  bench("lightningcss mixed nested selectors and at-rules", () => {
+    transformWithLightningCss(nestedMixedScopedSource);
   });
 
   bench("lightningcss animation keyframes", () => {
@@ -67,6 +72,10 @@ describe("lightningcss baseline: no-op visitor throughput", () => {
 
   bench("lightningcss nested at-rules", () => {
     transformWithLightningCssNoOpVisitor(nestedAtRuleScopedSource);
+  });
+
+  bench("lightningcss mixed nested selectors and at-rules", () => {
+    transformWithLightningCssNoOpVisitor(nestedMixedScopedSource);
   });
 
   bench("lightningcss animation keyframes", () => {

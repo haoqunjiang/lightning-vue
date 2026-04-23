@@ -390,7 +390,13 @@ function printLightningCssHeadroomSummary(benchmarks) {
       .map(({ benchmark, scenario }) => {
         const rawEngine = rawEngineByScenario.get(scenario);
         const noOpVisitor = noOpVisitorByScenario.get(scenario);
-        if (!rawEngine || !noOpVisitor) {
+        if (
+          !rawEngine ||
+          !noOpVisitor ||
+          typeof rawEngine.hz !== "number" ||
+          typeof noOpVisitor.hz !== "number" ||
+          typeof benchmark.hz !== "number"
+        ) {
           return null;
         }
 
