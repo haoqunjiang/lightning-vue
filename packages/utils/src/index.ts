@@ -7,6 +7,7 @@ export {
   type SelectorParserOptions,
 } from "./selectors";
 export {
+  analyzeCssNestingStructure,
   findLastNonWhitespaceIndex,
   findTrimmedSourceRange,
   walkCssBlockPreludes,
@@ -20,6 +21,7 @@ export {
   type CssBlockKind,
   type CssBlockPrelude,
   type CssBlockNode,
+  type CssNestingStructureSummary,
   type CssSourceMapMerge,
   type CssSelectorSourceRewriteOptions,
   type CssSelectorSourceRewriteWithMapResult,

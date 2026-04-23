@@ -34,6 +34,30 @@ const animationKeyframes = analyzeLightningCssStyle(
   animationScopedSource,
   "data-v-bench",
 ).keyframes;
+const normalizedNestedSelectorAnalysis = analyzeLightningCssStyle(
+  normalizedNestedSelectorSource,
+  "data-v-bench",
+);
+const normalizedNestedAtRuleAnalysis = analyzeLightningCssStyle(
+  normalizedNestedAtRuleSource,
+  "data-v-bench",
+);
+const normalizedNestedMixedAnalysis = analyzeLightningCssStyle(
+  normalizedNestedMixedSource,
+  "data-v-bench",
+);
+const loweredNormalizedNestedSelectorAnalysis = analyzeLightningCssStyle(
+  loweredNormalizedNestedSelectorSource,
+  "data-v-bench",
+);
+const loweredNormalizedNestedAtRuleAnalysis = analyzeLightningCssStyle(
+  loweredNormalizedNestedAtRuleSource,
+  "data-v-bench",
+);
+const loweredNormalizedNestedMixedAnalysis = analyzeLightningCssStyle(
+  loweredNormalizedNestedMixedSource,
+  "data-v-bench",
+);
 const plannedAnimationRewrites = planNormalizedAnimationReferenceRewrites(
   animationScopedSource,
   animationKeyframes,
@@ -201,11 +225,19 @@ describe("lightningcss micro: nested selector normalization", () => {
   });
 
   bench("scope source normalized nested selectors", () => {
-    scopeLightningCssSource(normalizedNestedSelectorSource, "data-v-bench", true);
+    scopeLightningCssSource(
+      normalizedNestedSelectorSource,
+      "data-v-bench",
+      normalizedNestedSelectorAnalysis.hasScopedSelectorSpecials,
+    );
   });
 
   bench("scope source lowered normalized nested selectors", () => {
-    scopeLightningCssSource(loweredNormalizedNestedSelectorSource, "data-v-bench", true);
+    scopeLightningCssSource(
+      loweredNormalizedNestedSelectorSource,
+      "data-v-bench",
+      loweredNormalizedNestedSelectorAnalysis.hasScopedSelectorSpecials,
+    );
   });
 
   bench("transform + scoped visitor normalized nested selectors", () => {
@@ -232,7 +264,11 @@ describe("lightningcss micro: nested selector normalization", () => {
 
 describe("lightningcss micro: nested at-rule normalization", () => {
   bench("scope source normalized nested at-rules", () => {
-    scopeLightningCssSource(normalizedNestedAtRuleSource, "data-v-bench", true);
+    scopeLightningCssSource(
+      normalizedNestedAtRuleSource,
+      "data-v-bench",
+      normalizedNestedAtRuleAnalysis.hasScopedSelectorSpecials,
+    );
   });
 
   bench("normalize nested at-rule blocks", () => {
@@ -260,7 +296,11 @@ describe("lightningcss micro: nested at-rule normalization", () => {
   });
 
   bench("scope source lowered normalized nested at-rules", () => {
-    scopeLightningCssSource(loweredNormalizedNestedAtRuleSource, "data-v-bench", true);
+    scopeLightningCssSource(
+      loweredNormalizedNestedAtRuleSource,
+      "data-v-bench",
+      loweredNormalizedNestedAtRuleAnalysis.hasScopedSelectorSpecials,
+    );
   });
 
   bench("transform + scoped visitor normalized nested at-rules", () => {
@@ -291,7 +331,11 @@ describe("lightningcss micro: nested mixed normalization", () => {
   });
 
   bench("scope source normalized mixed nested selectors and at-rules", () => {
-    scopeLightningCssSource(normalizedNestedMixedSource, "data-v-bench", true);
+    scopeLightningCssSource(
+      normalizedNestedMixedSource,
+      "data-v-bench",
+      normalizedNestedMixedAnalysis.hasScopedSelectorSpecials,
+    );
   });
 
   bench("transform only mixed nested selectors and at-rules", () => {
@@ -311,6 +355,10 @@ describe("lightningcss micro: nested mixed normalization", () => {
   });
 
   bench("scope source lowered normalized mixed nested selectors and at-rules", () => {
-    scopeLightningCssSource(loweredNormalizedNestedMixedSource, "data-v-bench", true);
+    scopeLightningCssSource(
+      loweredNormalizedNestedMixedSource,
+      "data-v-bench",
+      loweredNormalizedNestedMixedAnalysis.hasScopedSelectorSpecials,
+    );
   });
 });

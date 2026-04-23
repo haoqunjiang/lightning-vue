@@ -1,13 +1,27 @@
-import { walkCssBlockPreludes } from "@lightning-vue/utils";
+import { analyzeCssNestingStructure, type CssNestingStructureSummary } from "@lightning-vue/utils";
 import { hasCssVarsBinding } from "../cssVars";
 import { registerScopedKeyframeRename } from "./keyframeNames";
 
+export type LightningCssNestedStructure = CssNestingStructureSummary;
+
 export interface LightningCssStyleAnalysis {
   hasAnimationDeclarations: boolean;
-  hasNestedStyleRules: boolean;
+  nested: LightningCssNestedStructure;
   hasScopedSelectorSpecials: boolean;
   hasVBind: boolean;
   keyframes: Record<string, string>;
+}
+
+export function hasNestedStructure(nested: LightningCssNestedStructure): boolean {
+  return nested.hasNestedSelectorChildren || nested.hasNestedAtRuleChildren;
+}
+
+export function needsNestedStyleNormalization(analysis: LightningCssStyleAnalysis): boolean {
+  return (
+    analysis.nested.hasNestedSelectorChildren ||
+    (analysis.hasScopedSelectorSpecials &&
+      analysis.nested.hasNestedSelectorDescendantsInAtRuleChildren)
+  );
 }
 
 export function deriveAnalysisAfterNestedNormalization(
@@ -28,21 +42,31 @@ export function deriveAnalysisAfterNestedNormalization(
 
 export function analyzeLightningCssStyle(source: string, id: string): LightningCssStyleAnalysis {
   const shortId = id.replace(/^data-v-/, "");
+  const mayContainKeyframesPrelude = /@(?:-\w+-)?keyframes\b/i.test(source);
   const analysis: LightningCssStyleAnalysis = {
     hasAnimationDeclarations: /animation/i.test(source),
-    hasNestedStyleRules: false,
+    nested: {
+      hasNestedSelectorChildren: false,
+      hasNestedAtRuleChildren: false,
+      hasNestedSelectorDescendantsInAtRuleChildren: false,
+      hasMixedNestedChildren: false,
+    },
     hasScopedSelectorSpecials:
       source.includes(":deep(") || source.includes(":slotted(") || source.includes(":global("),
     hasVBind: hasCssVarsBinding(source),
     keyframes: Object.create(null),
   };
 
-  walkCssBlockPreludes(source, (prelude) => {
-    if (prelude.parentKind === "style") {
-      analysis.hasNestedStyleRules = true;
-    }
-    registerScopedKeyframeRename(prelude.normalizedPrelude, shortId, analysis.keyframes);
-  });
+  analysis.nested = analyzeCssNestingStructure(
+    source,
+    mayContainKeyframesPrelude
+      ? (prelude) => {
+          if (prelude.blockKind === "keyframes") {
+            registerScopedKeyframeRename(prelude.normalizedPrelude, shortId, analysis.keyframes);
+          }
+        }
+      : undefined,
+  );
 
   return analysis;
 }

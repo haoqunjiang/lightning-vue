@@ -2,6 +2,7 @@ import {
   scopeLightningCssSource,
   scopeLightningCssSourceWithMap,
 } from "../style/lightningcss/scoped/source";
+import { hasNestedStructure } from "../style/lightningcss/analysis";
 import { createLightningCssStyleVisitor } from "../style/lightningcss/visitor";
 import { createLightningCssModulesConfig } from "./modules";
 import type { CompileSession, LightningCssRuntime, TransformPlan } from "./types";
@@ -66,7 +67,7 @@ function createBaseTransformPlan(
     cssModules: context.modules
       ? createLightningCssModulesConfig(context.modulesOptions)
       : undefined,
-    includeNesting: state.analysis.hasNestedStyleRules,
+    includeNesting: hasNestedStructure(state.analysis.nested),
     inputSourceMap: state.inputMap ? JSON.stringify(state.inputMap) : undefined,
   };
 }

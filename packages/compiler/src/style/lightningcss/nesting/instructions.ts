@@ -23,7 +23,6 @@ export interface BlockDecorationInstructions {
 export interface ChildNormalizationInstructions {
   childAtRuleContext: NestedNormalizationContext;
   childStyleContext: NestedNormalizationContext;
-  hoistDeclarationOnlyAtRulesToParentEnd?: number;
 }
 
 export interface StyleRuleNormalizationInstructions
@@ -96,11 +95,7 @@ export function createStyleRuleNormalizationInstructions(
         : null,
     declarationWrapperPrelude,
     disableCurrentRuleInjection: inheritsContext || shouldWrapDeclarations,
-    ...createChildNormalizationInstructions(
-      inheritedContextForChildren,
-      declarationWrapperPrelude,
-      block.end,
-    ),
+    ...createChildNormalizationInstructions(inheritedContextForChildren, declarationWrapperPrelude),
   };
 }
 
@@ -115,7 +110,7 @@ export function createAtRuleNormalizationInstructions(
 
   // Conditional wrappers such as `@media` do not change deep/slot/local
   // context themselves. They only forward the current context and, when
-  // relevant, the declaration wrapper that child declaration-only blocks need.
+  // relevant, the declaration wrapper for child declarations.
   return {
     blockKind: "at-rule",
     declarationWrapperPrelude: propagatedDeclarationWrapper,
@@ -131,7 +126,6 @@ function shouldUseNoInjectDeclarationWrapper(prelude: string, inheritsContext: b
 function createChildNormalizationInstructions(
   inheritedContext: NestedScopeContext,
   declarationWrapperPrelude: string | null,
-  hoistDeclarationOnlyAtRulesToParentEnd?: number,
 ): ChildNormalizationInstructions {
   return {
     childAtRuleContext: {
@@ -145,6 +139,5 @@ function createChildNormalizationInstructions(
       inheritedContext,
       propagatedDeclarationWrapper: null,
     },
-    hoistDeclarationOnlyAtRulesToParentEnd,
   };
 }

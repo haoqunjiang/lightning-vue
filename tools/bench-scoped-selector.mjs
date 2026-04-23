@@ -6,7 +6,11 @@ import { dirname, join, relative, resolve } from "node:path";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const compilerRoot = resolve(repoRoot, "packages/compiler");
-const vpBin = resolve(repoRoot, "node_modules/.bin", process.platform === "win32" ? "vp.cmd" : "vp");
+const vpBin = resolve(
+  repoRoot,
+  "node_modules/.bin",
+  process.platform === "win32" ? "vp.cmd" : "vp",
+);
 const defaultBenchFiles = [
   "bench/compileStyle.compare.bench.ts",
   "bench/compileStyle.internal.bench.ts",
@@ -323,8 +327,7 @@ function getLightningVsPostcssComparison(members) {
     return null;
   }
 
-  const faster =
-    lightningcss.benchmark.hz >= postcss.benchmark.hz ? lightningcss : postcss;
+  const faster = lightningcss.benchmark.hz >= postcss.benchmark.hz ? lightningcss : postcss;
   const slower = faster === lightningcss ? postcss : lightningcss;
 
   return {
@@ -436,9 +439,9 @@ function printLightningCssHeadroomSummary(benchmarks) {
     for (const row of rows) {
       console.log(`  - ${row.label}`);
       console.log(
-        `    raw lightningcss: ${highlightMetric(formatHertz(row.rawEngine.hz))} | no-op visitor: ${highlightMetric(formatHertz(
-          row.noOpVisitor.hz,
-        ))} | full compiler: ${highlightMetric(formatHertz(row.benchmark.hz))}`,
+        `    raw lightningcss: ${highlightMetric(formatHertz(row.rawEngine.hz))} | no-op visitor: ${highlightMetric(
+          formatHertz(row.noOpVisitor.hz),
+        )} | full compiler: ${highlightMetric(formatHertz(row.benchmark.hz))}`,
       );
       console.log(
         `    no-op visitor overhead: ${highlightMetric(
@@ -457,10 +460,7 @@ function printLightningCssHeadroomSummary(benchmarks) {
 function groupDeltaEntriesBySuite(changed) {
   const groups = new Map();
   for (const entry of changed) {
-    if (
-      typeof entry?.benchmark?.medianMs !== "number" ||
-      typeof entry?.deltaPercent !== "number"
-    ) {
+    if (typeof entry?.benchmark?.medianMs !== "number" || typeof entry?.deltaPercent !== "number") {
       continue;
     }
     const { suite, subgroup } = splitGroupLabel(entry.benchmark);
@@ -509,7 +509,7 @@ function printGroupedDeltaSummary(changed) {
 }
 
 function getHeadroomScenarioLabel(benchmark) {
-  const { suite, subgroup } = splitGroupLabel(benchmark);
+  const { suite } = splitGroupLabel(benchmark);
 
   if (suite === "lightningcss baseline: raw engine throughput") {
     return benchmark.name.startsWith("lightningcss ")

@@ -52,7 +52,7 @@ There are three constraints that drive the design:
 
 1. Lightning CSS understands CSS, but it does not understand Vue-specific
    selector semantics such as `:deep(...)`, `:slotted(...)`, and `:global(...)`.
-2. Vue scoped styles are not “just add `[data-v-xxx]` everywhere”.
+2. Vue scoped styles involve more than adding `[data-v-xxx]` everywhere.
    Nested rules, deep boundaries, slot scope, and global escapes all affect
    where the scope attribute is allowed to appear.
 3. For performance, we do not want every stylesheet to pay for a full AST-based
@@ -61,7 +61,7 @@ There are three constraints that drive the design:
 So the package is built around a simple rule:
 
 - do the cheapest correct thing first
-- only escalate to heavier work when the stylesheet actually needs it
+- escalate to heavier work when the stylesheet needs it
 
 ## End-to-End Flow
 
@@ -69,7 +69,7 @@ So the package is built around a simple rule:
 flowchart TD
   A[Raw SFC style source] --> B[Validate options<br/>preprocess if needed]
   B --> C[Reject legacy Vue scoped syntax]
-  C --> D[Analyze source<br/>nested? carriers? animation? keyframes?]
+  C --> D[Analyze source<br/>nested selector children?<br/>nested at-rule children?<br/>carriers? animation? keyframes?]
   D --> E[Rewrite v-bind CSS vars]
   E --> F{scoped + nested rules?}
   F -- yes --> G[Normalize nested blocks in source]
@@ -126,13 +126,18 @@ parsing branches to the hot path for no real benefit.
 [analysis.ts](./src/style/lightningcss/analysis.ts) is a cheap routing stage.
 It answers:
 
-- does this stylesheet contain nested style rules?
+- does this stylesheet contain direct nested selector children?
+- does it contain direct nested at-rule children?
+- do those nested at-rules contain deeper selector descendants?
 - does it contain modern Vue scope carriers?
 - does it contain animation declarations?
 - which local `@keyframes` names will be renamed?
 - does it contain `v-bind(...)`?
 
-This stage exists so later work can stay conditional instead of unconditional.
+The nested summary comes from a structural source walk in
+`@lightning-vue/utils`, and the same pass also collects local keyframe names.
+That keeps the routing facts explicit without paying for a full block tree
+unless the stylesheet needs nested normalization.
 
 ### 4. Rewrite `v-bind(...)`
 
@@ -141,11 +146,20 @@ stable, and easy to map back to original source locations.
 
 ### 5. Normalize Nested Blocks
 
-If the style is both `scoped` and nested, the package normalizes nested blocks
-**before** selector scoping in
+If the style is `scoped` and its nested summary says the stylesheet needs
+nested normalization, the package normalizes nested blocks **before** selector
+scoping in
 [nesting/normalize.ts](./src/style/lightningcss/nesting/normalize.ts).
 
 This is one of the most important design decisions in the package.
+
+Plain local nested-at-rule-only cases skip this pass. They go straight to the
+source-level selector rewrite and let Lightning CSS lower the remaining
+nesting. The normalizer still runs for cases that need more context than a
+plain local nested-at-rule tree, including:
+
+- direct nested selector children
+- deep/slotted/global context that must flow through nested at-rules
 
 The normalizer does not lower nesting syntax to final flat CSS. Instead, it
 rewrites the source into a shape that later selector scoping can reason about.
@@ -195,7 +209,6 @@ Those plans cover four decisions:
 - whether declarations need an explicit `& { ... }` wrapper
 - whether the current rule becomes context-only
 - which context child style rules and child at-rules inherit
-- whether declaration-only nested at-rules must be hoisted out
 
 This stage stays source-based because it benchmarks better than the AST-heavy
 alternative for carrier-heavy nested styles.
@@ -335,7 +348,7 @@ avoids asking separate helpers for separate facts about the same selector.
 
 Placement does **not** keep carrying that whole state afterward.
 
-Once a real scope attribute has been inserted, the remaining contract is just:
+Once a real scope attribute has been inserted, the remaining contract is:
 
 - `selector`
 - `deep`

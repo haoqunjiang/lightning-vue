@@ -12,7 +12,7 @@ context:
 
 initial:
   - initial.source=".foo-bar { color: red; }"
-  - initial.analysis=nested:false specials:false animations:false keyframes:0
+  - initial.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
@@ -20,7 +20,7 @@ initial:
 prepared:
   - prepared=true
   - prepared.source=".foo-bar { color: red; }"
-  - prepared.analysis=nested:false specials:false animations:false keyframes:0
+  - prepared.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0
@@ -38,53 +38,6 @@ final:
   - errors=0
   - dependencies=0
   - modules={"fooBar":"Ltp18W_foo-bar"}"
-`;
-
-exports[`'css vars and animation rewrite path' 1`] = `
-"source: .card {
-  color: v-bind(themeColor);
-  animation: fade 1s;
-}
-@keyframes fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-context:
-  - filename=trace.css
-  - scoped=true
-  - modules=false
-  - sourceMap=false
-  - isProd=false
-
-initial:
-  - initial.source=".card {\\n  color: v-bind(themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
-  - initial.analysis=nested:false specials:false animations:true keyframes:1
-  - initial.inputMap=false
-  - initial.errors=0
-  - initial.dependencies=0
-
-prepared:
-  - prepared=true
-  - prepared.source=".card {\\n  color: var(--trace-themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
-  - prepared.analysis=nested:false specials:false animations:true keyframes:1
-  - prepared.inputMap=false
-  - prepared.errors=0
-  - prepared.dependencies=0
-
-transform:
-  - code=".card[data-v-trace]{\\n  color: var(--trace-themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
-  - selectorsScopedInSource=true
-  - includeNesting=false
-  - inputSourceMap=false
-  - cssModules=undefined
-
-final:
-  - code=".card[data-v-trace] {\\n  color: var(--trace-themeColor);\\n  animation: 1s fade-trace;\\n}\\n\\n@keyframes fade-trace {\\n  from {\\n    opacity: 0;\\n  }\\n\\n  to {\\n    opacity: 1;\\n  }\\n}\\n"
-  - map=false
-  - errors=0
-  - dependencies=0
-  - modules=undefined"
 `;
 
 exports[`'css vars with renamed keyframes' 1`] = `
@@ -106,7 +59,7 @@ context:
 
 initial:
   - initial.source=".card {\\n  color: v-bind(themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
-  - initial.analysis=nested:false specials:false animations:true keyframes:1
+  - initial.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:true keyframes:1
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
@@ -114,7 +67,7 @@ initial:
 prepared:
   - prepared=true
   - prepared.source=".card {\\n  color: var(--trace-themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
-  - prepared.analysis=nested:false specials:false animations:true keyframes:1
+  - prepared.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:true keyframes:1
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0
@@ -149,7 +102,7 @@ context:
 
 initial:
   - initial.source=".card {\\n  color: red;\\n  .title { color: blue; }\\n}"
-  - initial.analysis=nested:true specials:false animations:false keyframes:0
+  - initial.analysis=nested:selectorChildren=true,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
@@ -157,7 +110,7 @@ initial:
 prepared:
   - prepared=true
   - prepared.source=":global(.card) {\\n  & {color: red;}\\n  .title { color: blue; }\\n}"
-  - prepared.analysis=nested:true specials:true animations:false keyframes:0
+  - prepared.analysis=nested:selectorChildren=true,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:true animations:false keyframes:0
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0
@@ -177,6 +130,51 @@ final:
   - modules=undefined"
 `;
 
+exports[`'plain nested at-rules skip nested nor…' 1`] = `
+"source: .card {
+  color: red;
+  @media (min-width: 600px) {
+    color: blue;
+  }
+}
+
+context:
+  - filename=trace.css
+  - scoped=true
+  - modules=false
+  - sourceMap=false
+  - isProd=false
+
+initial:
+  - initial.source=".card {\\n  color: red;\\n  @media (min-width: 600px) {\\n    color: blue;\\n  }\\n}"
+  - initial.analysis=nested:selectorChildren=false,atRuleChildren=true,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - initial.inputMap=false
+  - initial.errors=0
+  - initial.dependencies=0
+
+prepared:
+  - prepared=true
+  - prepared.source=".card {\\n  color: red;\\n  @media (min-width: 600px) {\\n    color: blue;\\n  }\\n}"
+  - prepared.analysis=nested:selectorChildren=false,atRuleChildren=true,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - prepared.inputMap=false
+  - prepared.errors=0
+  - prepared.dependencies=0
+
+transform:
+  - code=".card[data-v-trace]{\\n  color: red;\\n  @media (min-width: 600px) {\\n    color: blue;\\n  }\\n}"
+  - selectorsScopedInSource=true
+  - includeNesting=true
+  - inputSourceMap=false
+  - cssModules=undefined
+
+final:
+  - code=".card[data-v-trace] {\\n  color: red;\\n}\\n\\n@media (width >= 600px) {\\n  .card[data-v-trace] {\\n    color: #00f;\\n  }\\n}\\n"
+  - map=false
+  - errors=0
+  - dependencies=0
+  - modules=undefined"
+`;
+
 exports[`'simple scoped source path' 1`] = `
 "source: .card .title { color: red; }
 
@@ -189,7 +187,7 @@ context:
 
 initial:
   - initial.source=".card .title { color: red; }"
-  - initial.analysis=nested:false specials:false animations:false keyframes:0
+  - initial.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
@@ -197,7 +195,7 @@ initial:
 prepared:
   - prepared=true
   - prepared.source=".card .title { color: red; }"
-  - prepared.analysis=nested:false specials:false animations:false keyframes:0
+  - prepared.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0

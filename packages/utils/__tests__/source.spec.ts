@@ -1,6 +1,7 @@
 import type { Selector } from "lightningcss";
 import type { CssBlockPrelude } from "../src/source";
 import {
+  analyzeCssNestingStructure,
   findTrimmedSourceRange,
   forEachTopLevelTextRange,
   hasMeaningfulCssText,
@@ -149,6 +150,53 @@ describe("source-facing API", () => {
     expect(roots[0].children[0].normalizedPrelude).toBe("@media (min-width: 1px)");
     expect(roots[0].children[0].children[0].normalizedPrelude).toBe(".bar");
     expect(roots[0].children[1].normalizedPrelude).toBe(".baz");
+  });
+
+  test("analyzeCssNestingStructure distinguishes direct nested selectors, at-rules, and mixed bodies", () => {
+    expect(
+      analyzeCssNestingStructure(`
+.foo {
+  .bar { color: red; }
+}
+`),
+    ).toEqual({
+      hasNestedSelectorChildren: true,
+      hasNestedAtRuleChildren: false,
+      hasNestedSelectorDescendantsInAtRuleChildren: false,
+      hasMixedNestedChildren: false,
+    });
+
+    expect(
+      analyzeCssNestingStructure(`
+.foo {
+  @media (min-width: 1px) {
+    color: red;
+    .bar { color: blue; }
+  }
+}
+`),
+    ).toEqual({
+      hasNestedSelectorChildren: false,
+      hasNestedAtRuleChildren: true,
+      hasNestedSelectorDescendantsInAtRuleChildren: true,
+      hasMixedNestedChildren: false,
+    });
+
+    expect(
+      analyzeCssNestingStructure(`
+.foo {
+  .bar { color: red; }
+  @media (min-width: 1px) {
+    .baz { color: blue; }
+  }
+}
+`),
+    ).toEqual({
+      hasNestedSelectorChildren: true,
+      hasNestedAtRuleChildren: true,
+      hasNestedSelectorDescendantsInAtRuleChildren: true,
+      hasMixedNestedChildren: true,
+    });
   });
 
   test("source segment helpers walk and detect top-level text correctly", () => {

@@ -132,7 +132,6 @@ function formatNestedBlockInstructions(
     `instructions.kind=${instructions.blockKind}`,
     `instructions.wrapper=${instructions.declarationWrapperPrelude ?? "none"}`,
     `instructions.disableCurrentRuleInjection=${instructions.disableCurrentRuleInjection}`,
-    `instructions.hoistDeclarationOnlyAtRules=${!!instructions.hoistDeclarationOnlyAtRulesToParentEnd}`,
     `instructions.childStyleContext=${formatNestedContext(instructions.childStyleContext)}`,
     `instructions.childAtRuleContext=${formatNestedContext(instructions.childAtRuleContext)}`,
     "warningMessage" in instructions

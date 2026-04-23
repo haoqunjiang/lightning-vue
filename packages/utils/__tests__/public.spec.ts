@@ -20,6 +20,7 @@ describe("public root entrypoint", () => {
 
   test("re-exports the source-facing API", () => {
     expect(utils.walkCssBlockPreludes).toBe(source.walkCssBlockPreludes);
+    expect(utils.analyzeCssNestingStructure).toBe(source.analyzeCssNestingStructure);
     expect(utils.rewriteCssSelectorSource).toBe(source.rewriteCssSelectorSource);
     expect(utils.rewriteCssSelectorSourceWithMap).toBe(source.rewriteCssSelectorSourceWithMap);
     expect(utils.parseCssBlockTree).toBe(source.parseCssBlockTree);
@@ -81,6 +82,12 @@ describe("public root entrypoint", () => {
 
     expect(preludes).toEqual([".foo", "@media (min-width: 1px)", ".bar"]);
     expect(utils.findLastNonWhitespaceIndex("  .foo \n")).toBe(5);
+    expect(utils.analyzeCssNestingStructure(sourceCode)).toEqual({
+      hasNestedSelectorChildren: false,
+      hasNestedAtRuleChildren: true,
+      hasNestedSelectorDescendantsInAtRuleChildren: true,
+      hasMixedNestedChildren: false,
+    });
 
     const roots = utils.parseCssBlockTree(sourceCode);
     expect(roots).toHaveLength(1);

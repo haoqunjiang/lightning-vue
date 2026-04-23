@@ -1,5 +1,8 @@
 import { rewriteCssVarsInStyleSource, rewriteCssVarsInStyleSourceWithMap } from "../style/cssVars";
-import { deriveAnalysisAfterNestedNormalization } from "../style/lightningcss/analysis";
+import {
+  deriveAnalysisAfterNestedNormalization,
+  needsNestedStyleNormalization,
+} from "../style/lightningcss/analysis";
 import { normalizeNestedStyleBlocks } from "../style/lightningcss/nesting/normalize";
 import { findLegacyVueScopedSyntaxError } from "../style/lightningcss/scoped/legacy";
 import type { CompileSession } from "./types";
@@ -27,7 +30,7 @@ export function rewriteCssVarsInSession(session: CompileSession): void {
 
 export function normalizeNestedStylesInSession(session: CompileSession): void {
   const { context, state } = session;
-  if (!context.scoped || !state.analysis.hasNestedStyleRules) {
+  if (!context.scoped || !needsNestedStyleNormalization(state.analysis)) {
     return;
   }
 

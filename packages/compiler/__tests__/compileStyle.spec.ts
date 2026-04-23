@@ -1067,29 +1067,6 @@ describe("compileStyleWithLightningCss", () => {
     expect(normalized).not.toContain(".foo[data-v-test] { color:");
   });
 
-  test("declaration-only at-rules under nested conditional rules are not wrapped with & blocks", () => {
-    const result = compileStyleWithLightningCss({
-      source: `.foo {
-  .bar { color: red; }
-  @media print {
-    @font-face {
-      font-family: x;
-      src: url(x);
-    }
-  }
-}`,
-      filename: "test.css",
-      id: "data-v-test",
-      scoped: true,
-    });
-
-    expect(result.errors).toHaveLength(0);
-    expect(result.code).not.toContain("& {");
-    const normalized = normalizeCssOutput(flattenCss(result.code));
-    expect(normalized).toContain("@media print { @font-face { font-family: x;");
-    expect(normalized).toMatch(/src: url\("?x"?\);/);
-  });
-
   test("leading universal selector is preserved before child and sibling combinators", () => {
     expect(
       normalizeCssOutput(

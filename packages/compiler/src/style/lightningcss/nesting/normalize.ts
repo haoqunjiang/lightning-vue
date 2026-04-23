@@ -3,7 +3,6 @@ import { type CssBlockNode, parseCssBlockTree } from "@lightning-vue/utils";
 import MagicString from "magic-string";
 import merge from "merge-source-map";
 import { warnOnce } from "../../../warn";
-import { hoistNestedAtRuleBlock, isDeclarationOnlyAtRuleSubtree } from "./atRules";
 import {
   createAtRuleNormalizationInstructions,
   createInitialNestedNormalizationContext,
@@ -118,22 +117,11 @@ function normalizeChildBlocks(
   source: string,
   styleContext: NestedNormalizationContext,
   atRuleContext: NestedNormalizationContext,
-  hoistDeclarationOnlyAtRulesToParentEnd?: number,
 ): ApplyBlockDecorationResult {
   let changed = false;
   let introducedScopedSelectorSpecials = false;
 
   for (const child of block.children) {
-    if (
-      hoistDeclarationOnlyAtRulesToParentEnd != null &&
-      child.blockKind === "at-rule" &&
-      isDeclarationOnlyAtRuleSubtree(child, source)
-    ) {
-      changed =
-        hoistNestedAtRuleBlock(child, hoistDeclarationOnlyAtRulesToParentEnd, source, s) || changed;
-      continue;
-    }
-
     const childResult = normalizeNestedBlock(
       child,
       s,
@@ -167,7 +155,6 @@ function applyStyleRuleNormalizationInstructions(
     source,
     instructions.childStyleContext,
     instructions.childAtRuleContext,
-    instructions.hoistDeclarationOnlyAtRulesToParentEnd,
   );
 
   return {

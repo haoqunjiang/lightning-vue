@@ -53,6 +53,18 @@ export const compileSessionTraceCases: CompileSessionTraceCase[] = [
     },
   },
   {
+    title: "plain nested at-rules skip nested normalization",
+    options: {
+      scoped: true,
+      source: `.card {
+  color: red;
+  @media (min-width: 600px) {
+    color: blue;
+  }
+}`,
+    },
+  },
+  {
     title: "css vars with renamed keyframes",
     options: {
       scoped: true,
@@ -188,9 +200,10 @@ function formatCompileContext(context: ReturnType<typeof createCompileContext>):
 }
 
 function formatCompileState(label: string, state: ReturnType<typeof createCompileState>): string[] {
+  const nested = state.analysis.nested;
   return [
     `${label}.source=${JSON.stringify(state.source)}`,
-    `${label}.analysis=nested:${state.analysis.hasNestedStyleRules} specials:${state.analysis.hasScopedSelectorSpecials} animations:${state.analysis.hasAnimationDeclarations} keyframes:${Object.keys(state.analysis.keyframes).length}`,
+    `${label}.analysis=nested:selectorChildren=${nested.hasNestedSelectorChildren},atRuleChildren=${nested.hasNestedAtRuleChildren},selectorsInAtRules=${nested.hasNestedSelectorDescendantsInAtRuleChildren},mixedChildren=${nested.hasMixedNestedChildren} specials:${state.analysis.hasScopedSelectorSpecials} animations:${state.analysis.hasAnimationDeclarations} keyframes:${Object.keys(state.analysis.keyframes).length}`,
     `${label}.inputMap=${!!state.inputMap}`,
     `${label}.errors=${state.errors.length}`,
     `${label}.dependencies=${state.dependencies.size}`,

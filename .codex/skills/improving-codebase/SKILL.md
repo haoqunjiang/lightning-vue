@@ -18,7 +18,7 @@ or architecture cleanup anywhere in this repo.
 - Always run `git diff --check` after meaningful code changes.
 - After structural refactors, update the relevant `ARCHITECTURE.md` or design
   doc.
-- If the design cannot be explained clearly and concisely in that doc, keep
+- If the design cannot be explained concisely in that doc, keep
   refining it.
 - If a multi-stage flow becomes hard to reason about, add or update a trace
   harness that makes each stage observable instead of relying on debugger-only
@@ -63,6 +63,14 @@ If the change affects architecture or phase structure:
 - make the important stage boundaries observable in a supplemental trace harness
   when the code lacks one
 
+If the change affects maintainer-facing wording such as docs, comments, debug
+strings, trace titles, or benchmark labels:
+
+- review the touched wording for clarity after the code settles
+- prefer direct statements over contrast-heavy phrasing
+- avoid stock patterns such as `not X but Y`, `intentionally`, and `rather than`
+  unless they add real information that a simpler sentence would lose
+
 ## How To Read The Benchmarks
 
 - Prefer repeated median comparisons over a single run.
@@ -76,7 +84,7 @@ When you update the design, the architecture doc should answer:
 
 - what the phase boundaries are
 - what state crosses those boundaries
-- where complexity is intentionally isolated
+- where complexity is isolated
 - what invariants future refactors must preserve
 
 Warning signs:
@@ -86,7 +94,7 @@ Warning signs:
 - a helper can fan out but pretends to return one result
 - planning decisions only exist as temporary locals inside the apply phase
 - the design only makes sense when described with vague terms
-- a phase boundary cannot be shown clearly in a trace or snapshot
+- a phase boundary cannot be shown in a trace or snapshot
 
 If one of those is true, keep refactoring.
 

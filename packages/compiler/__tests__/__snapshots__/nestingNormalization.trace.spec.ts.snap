@@ -16,7 +16,6 @@ instructions:
     instructions.kind=style
     instructions.wrapper=none
     instructions.disableCurrentRuleInjection=false
-    instructions.hoistDeclarationOnlyAtRules=true
     instructions.childStyleContext=none|none
     instructions.childAtRuleContext=none|none
     instructions.warning=none
@@ -26,7 +25,6 @@ instructions:
       instructions.kind=at-rule
       instructions.wrapper=none
       instructions.disableCurrentRuleInjection=false
-      instructions.hoistDeclarationOnlyAtRules=false
       instructions.childStyleContext=none|none
       instructions.childAtRuleContext=none|none
       instructions.warning=none
@@ -36,7 +34,6 @@ instructions:
         instructions.kind=style
         instructions.wrapper=none
         instructions.disableCurrentRuleInjection=false
-        instructions.hoistDeclarationOnlyAtRules=true
         instructions.childStyleContext=none|none
         instructions.childAtRuleContext=none|none
         instructions.warning=none
@@ -60,7 +57,6 @@ instructions:
     instructions.kind=style
     instructions.wrapper=&
     instructions.disableCurrentRuleInjection=true
-    instructions.hoistDeclarationOnlyAtRules=true
     instructions.childStyleContext=none|none
     instructions.childAtRuleContext=none|&
     instructions.warning=none
@@ -70,7 +66,6 @@ instructions:
       instructions.kind=style
       instructions.wrapper=none
       instructions.disableCurrentRuleInjection=false
-      instructions.hoistDeclarationOnlyAtRules=true
       instructions.childStyleContext=none|none
       instructions.childAtRuleContext=none|none
       instructions.warning=none
@@ -94,7 +89,6 @@ instructions:
     instructions.kind=style
     instructions.wrapper=&
     instructions.disableCurrentRuleInjection=true
-    instructions.hoistDeclarationOnlyAtRules=true
     instructions.childStyleContext=none|none
     instructions.childAtRuleContext=none|&
     instructions.warning=Mixed selector branches that combine Vue deep/slotted carriers with ordinary local branches under nested rules are handled conservatively. Descendants stay locally scoped; split the selector list into separate rules for precise behavior.
@@ -104,7 +98,6 @@ instructions:
       instructions.kind=style
       instructions.wrapper=none
       instructions.disableCurrentRuleInjection=false
-      instructions.hoistDeclarationOnlyAtRules=true
       instructions.childStyleContext=none|none
       instructions.childAtRuleContext=none|none
       instructions.warning=none
@@ -128,7 +121,6 @@ instructions:
     instructions.kind=style
     instructions.wrapper=none
     instructions.disableCurrentRuleInjection=false
-    instructions.hoistDeclarationOnlyAtRules=true
     instructions.childStyleContext=deep|none
     instructions.childAtRuleContext=deep|none
     instructions.warning=none
@@ -138,7 +130,6 @@ instructions:
       instructions.kind=style
       instructions.wrapper=none
       instructions.disableCurrentRuleInjection=true
-      instructions.hoistDeclarationOnlyAtRules=true
       instructions.childStyleContext=deep|none
       instructions.childAtRuleContext=deep|none
       instructions.warning=none
