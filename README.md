@@ -115,6 +115,33 @@ pnpm build
 pnpm bench
 ```
 
+- run only the PostCSS-vs-Lightning comparisons:
+
+```bash
+pnpm bench:compare
+```
+
+- run only the internal Lightning end-to-end benchmarks:
+
+```bash
+pnpm bench:internal
+```
+
+- run only the microbenchmarks:
+
+```bash
+pnpm bench:micro
+```
+
+- run one quick sample pass instead of the repeated baseline-style run:
+
+```bash
+pnpm bench:sample
+pnpm bench:compare:sample
+pnpm bench:internal:sample
+pnpm bench:micro:sample
+```
+
 - start the playgrounds:
 
 ```bash

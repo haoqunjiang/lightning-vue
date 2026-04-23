@@ -5,7 +5,12 @@ import { dirname, join, relative, resolve } from "node:path";
 
 const repoRoot = process.cwd();
 const compilerRoot = resolve(repoRoot, "packages/compiler");
-const defaultBenchFiles = ["__tests__/scopedSelector.bench.ts", "__tests__/compileStyle.bench.ts"];
+const defaultBenchFiles = [
+  "__tests__/compileStyle.compare.bench.ts",
+  "__tests__/compileStyle.internal.bench.ts",
+  "__tests__/compileStyle.micro.bench.ts",
+  "__tests__/scopedSelector.bench.ts",
+];
 
 const options = parseArgs(process.argv.slice(2));
 const benchFiles = options.benchFiles.length ? options.benchFiles : defaultBenchFiles;
@@ -45,6 +50,9 @@ function parseArgs(argv) {
 
   for (let index = 0; index < argv.length; index++) {
     const argument = argv[index];
+    if (argument === "--") {
+      continue;
+    }
     if (argument === "--bench") {
       options.benchFiles.push(argv[++index]);
       continue;
