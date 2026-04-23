@@ -457,6 +457,12 @@ function printLightningCssHeadroomSummary(benchmarks) {
 function groupDeltaEntriesBySuite(changed) {
   const groups = new Map();
   for (const entry of changed) {
+    if (
+      typeof entry?.benchmark?.medianMs !== "number" ||
+      typeof entry?.deltaPercent !== "number"
+    ) {
+      continue;
+    }
     const { suite, subgroup } = splitGroupLabel(entry.benchmark);
     const suiteBucket = groups.get(suite) ?? new Map();
     const subgroupKey = subgroup || entry.benchmark.name;
@@ -489,6 +495,9 @@ function printGroupedDeltaSummary(changed) {
       for (const { benchmark, deltaPercent } of [...members].sort(
         (left, right) => Math.abs(right.deltaPercent) - Math.abs(left.deltaPercent),
       )) {
+        if (typeof benchmark.medianMs !== "number" || typeof deltaPercent !== "number") {
+          continue;
+        }
         console.log(
           `    - ${benchmark.name}: ${formatMilliseconds(benchmark.medianMs)} (${formatSignedPercent(
             deltaPercent,
