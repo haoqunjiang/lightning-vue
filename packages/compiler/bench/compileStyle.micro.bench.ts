@@ -1,0 +1,271 @@
+import { bench, describe } from "vitest";
+import { Features } from "lightningcss";
+import { createLightningCssStyleVisitor } from "../src";
+import { analyzeLightningCssStyle } from "../src/style/lightningcss/analysis";
+import { rewriteNormalizedAnimationDeclarations } from "../src/style/lightningcss/scoped/animation";
+import { normalizeNestedStyleBlocks } from "../src/style/lightningcss/nesting/normalize";
+import { scopeLightningCssSource } from "../src/style/lightningcss/scoped/source";
+import {
+  animationFallbackScopedSource,
+  animationScopedSource,
+  logicalWrapperScopedSource,
+  loweredNormalizedNestedAtRuleSource,
+  loweredNormalizedNestedSelectorSource,
+  mixedRealisticScopedSource,
+  nestedAtRuleCarrierScopedSource,
+  nestedAtRuleScopedSource,
+  nestedSelectorScopedSource,
+  normalizedNestedAtRuleSource,
+  normalizedNestedSelectorSource,
+  simpleScopedSource,
+  transformWithLightningCss,
+  vueScopedFunctionSource,
+  warmupCompileBenchSuite,
+} from "./compileStyleBenchShared";
+
+warmupCompileBenchSuite();
+
+describe("lightningcss micro: transform breakdown", () => {
+  bench("transform only simple selectors", () => {
+    transformWithLightningCss(simpleScopedSource);
+  });
+
+  bench("transform + no-op visitor simple selectors", () => {
+    transformWithLightningCss(simpleScopedSource, { visitor: {} });
+  });
+
+  bench("transform + scoped visitor simple selectors", () => {
+    transformWithLightningCss(simpleScopedSource, {
+      visitor: createLightningCssStyleVisitor({
+        analysis: analyzeLightningCssStyle(simpleScopedSource, "data-v-bench"),
+        id: "data-v-bench",
+        scoped: true,
+      }),
+    });
+  });
+});
+
+describe("lightningcss micro: source preparation", () => {
+  bench("analyze style simple selectors", () => {
+    analyzeLightningCssStyle(simpleScopedSource, "data-v-bench");
+  });
+
+  bench("analyze style :deep() / :slotted() / :global() selectors", () => {
+    analyzeLightningCssStyle(vueScopedFunctionSource, "data-v-bench");
+  });
+
+  bench("scope source simple selectors", () => {
+    scopeLightningCssSource(simpleScopedSource, "data-v-bench", false);
+  });
+
+  bench("scope source :deep() / :slotted() / :global() selectors", () => {
+    scopeLightningCssSource(vueScopedFunctionSource, "data-v-bench", true);
+  });
+});
+
+describe("lightningcss micro: animation finalization", () => {
+  bench("analyze style animation keyframes", () => {
+    analyzeLightningCssStyle(animationScopedSource, "data-v-bench");
+  });
+
+  bench("rewrite normalized animation declarations", () => {
+    rewriteNormalizedAnimationDeclarations(
+      animationScopedSource,
+      analyzeLightningCssStyle(animationScopedSource, "data-v-bench").keyframes,
+    );
+  });
+
+  bench("rewrite normalized animation var() fallbacks and vendor-prefixed keyframes", () => {
+    rewriteNormalizedAnimationDeclarations(
+      animationFallbackScopedSource,
+      analyzeLightningCssStyle(animationFallbackScopedSource, "data-v-bench").keyframes,
+    );
+  });
+});
+
+describe("lightningcss micro: transform breakdown with :deep() / :slotted() / :global() selectors", () => {
+  bench("transform only :deep() / :slotted() / :global() selectors", () => {
+    transformWithLightningCss(vueScopedFunctionSource);
+  });
+
+  bench("transform + no-op visitor :deep() / :slotted() / :global() selectors", () => {
+    transformWithLightningCss(vueScopedFunctionSource, { visitor: {} });
+  });
+
+  bench("transform + scoped visitor :deep() / :slotted() / :global() selectors", () => {
+    transformWithLightningCss(vueScopedFunctionSource, {
+      visitor: createLightningCssStyleVisitor({
+        analysis: analyzeLightningCssStyle(vueScopedFunctionSource, "data-v-bench"),
+        id: "data-v-bench",
+        scoped: true,
+      }),
+    });
+  });
+});
+
+describe("lightningcss micro: transform breakdown with logical wrappers", () => {
+  bench("transform only logical wrapper selectors", () => {
+    transformWithLightningCss(logicalWrapperScopedSource);
+  });
+
+  bench("transform + no-op visitor logical wrapper selectors", () => {
+    transformWithLightningCss(logicalWrapperScopedSource, { visitor: {} });
+  });
+
+  bench("transform + scoped visitor logical wrapper selectors", () => {
+    transformWithLightningCss(logicalWrapperScopedSource, {
+      visitor: createLightningCssStyleVisitor({
+        analysis: analyzeLightningCssStyle(logicalWrapperScopedSource, "data-v-bench"),
+        id: "data-v-bench",
+        scoped: true,
+      }),
+    });
+  });
+});
+
+describe("lightningcss micro: transform breakdown with nested :deep() / :slotted() selectors inside at-rules", () => {
+  bench("transform only nested :deep() / :slotted() selectors inside at-rules", () => {
+    transformWithLightningCss(nestedAtRuleCarrierScopedSource);
+  });
+
+  bench("transform + include nesting nested :deep() / :slotted() selectors inside at-rules", () => {
+    transformWithLightningCss(nestedAtRuleCarrierScopedSource, {
+      include: Features.Nesting,
+    });
+  });
+
+  bench("transform + scoped visitor nested :deep() / :slotted() selectors inside at-rules", () => {
+    transformWithLightningCss(nestedAtRuleCarrierScopedSource, {
+      visitor: createLightningCssStyleVisitor({
+        analysis: analyzeLightningCssStyle(nestedAtRuleCarrierScopedSource, "data-v-bench"),
+        id: "data-v-bench",
+        scoped: true,
+      }),
+      include: Features.Nesting,
+    });
+  });
+});
+
+describe("lightningcss micro: mixed realistic source path", () => {
+  bench("analyze style mixed realistic styles", () => {
+    analyzeLightningCssStyle(mixedRealisticScopedSource, "data-v-bench");
+  });
+
+  bench("normalize nested style blocks mixed realistic styles", () => {
+    normalizeNestedStyleBlocks(mixedRealisticScopedSource, "bench.css");
+  });
+
+  bench("scope source mixed realistic styles", () => {
+    scopeLightningCssSource(mixedRealisticScopedSource, "data-v-bench", true);
+  });
+});
+
+describe("lightningcss micro: nested selector normalization", () => {
+  bench("transform + include nesting nested selectors", () => {
+    transformWithLightningCss(nestedSelectorScopedSource, {
+      include: Features.Nesting,
+    });
+  });
+
+  bench("transform only nested selectors", () => {
+    transformWithLightningCss(nestedSelectorScopedSource);
+  });
+
+  bench("transform + no-op visitor nested selectors", () => {
+    transformWithLightningCss(nestedSelectorScopedSource, { visitor: {} });
+  });
+
+  bench("normalize nested selector blocks", () => {
+    normalizeNestedStyleBlocks(nestedSelectorScopedSource, "bench.css");
+  });
+
+  bench("transform + include nesting normalized nested selectors", () => {
+    transformWithLightningCss(normalizedNestedSelectorSource, {
+      include: Features.Nesting,
+    });
+  });
+
+  bench("scope source normalized nested selectors", () => {
+    scopeLightningCssSource(normalizedNestedSelectorSource, "data-v-bench", true);
+  });
+
+  bench("scope source lowered normalized nested selectors", () => {
+    scopeLightningCssSource(loweredNormalizedNestedSelectorSource, "data-v-bench", true);
+  });
+
+  bench("transform + scoped visitor normalized nested selectors", () => {
+    transformWithLightningCss(normalizedNestedSelectorSource, {
+      visitor: createLightningCssStyleVisitor({
+        analysis: analyzeLightningCssStyle(normalizedNestedSelectorSource, "data-v-bench"),
+        id: "data-v-bench",
+        scoped: true,
+      }),
+      include: Features.Nesting,
+    });
+  });
+
+  bench("transform + scoped visitor lowered normalized nested selectors", () => {
+    transformWithLightningCss(loweredNormalizedNestedSelectorSource, {
+      visitor: createLightningCssStyleVisitor({
+        analysis: analyzeLightningCssStyle(loweredNormalizedNestedSelectorSource, "data-v-bench"),
+        id: "data-v-bench",
+        scoped: true,
+      }),
+    });
+  });
+});
+
+describe("lightningcss micro: nested at-rule normalization", () => {
+  bench("scope source normalized nested at-rules", () => {
+    scopeLightningCssSource(normalizedNestedAtRuleSource, "data-v-bench", true);
+  });
+
+  bench("normalize nested at-rule blocks", () => {
+    normalizeNestedStyleBlocks(nestedAtRuleScopedSource, "bench.css");
+  });
+
+  bench("transform only nested at-rules", () => {
+    transformWithLightningCss(nestedAtRuleScopedSource);
+  });
+
+  bench("transform + include nesting nested at-rules", () => {
+    transformWithLightningCss(nestedAtRuleScopedSource, {
+      include: Features.Nesting,
+    });
+  });
+
+  bench("transform + include nesting normalized nested at-rules", () => {
+    transformWithLightningCss(normalizedNestedAtRuleSource, {
+      include: Features.Nesting,
+    });
+  });
+
+  bench("transform + no-op visitor nested at-rules", () => {
+    transformWithLightningCss(nestedAtRuleScopedSource, { visitor: {} });
+  });
+
+  bench("scope source lowered normalized nested at-rules", () => {
+    scopeLightningCssSource(loweredNormalizedNestedAtRuleSource, "data-v-bench", true);
+  });
+
+  bench("transform + scoped visitor normalized nested at-rules", () => {
+    transformWithLightningCss(normalizedNestedAtRuleSource, {
+      visitor: createLightningCssStyleVisitor({
+        analysis: analyzeLightningCssStyle(normalizedNestedAtRuleSource, "data-v-bench"),
+        id: "data-v-bench",
+        scoped: true,
+      }),
+      include: Features.Nesting,
+    });
+  });
+
+  bench("transform + scoped visitor lowered normalized nested at-rules", () => {
+    transformWithLightningCss(loweredNormalizedNestedAtRuleSource, {
+      visitor: createLightningCssStyleVisitor({
+        analysis: analyzeLightningCssStyle(loweredNormalizedNestedAtRuleSource, "data-v-bench"),
+        id: "data-v-bench",
+        scoped: true,
+      }),
+    });
+  });
+});

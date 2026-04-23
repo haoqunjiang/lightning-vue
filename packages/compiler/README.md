@@ -46,7 +46,7 @@ falling back.
 Supported:
 
 - ordinary `<style>` and `<style scoped>` compilation
-- Vue selector functions such as `:deep()`, `:slotted()`, and `:global()`
+- `:deep()`, `:slotted()`, and `:global()` selectors
 - nested CSS via source normalization + Lightning CSS lowering
 - `postcssOptions.map`, which is the sourcemap request shape commonly used by
   `@vitejs/plugin-vue`

@@ -18,8 +18,8 @@ describe("scoped selector clone baselines", () => {
 });
 
 describe("scoped selector phase breakdown", () => {
-  bench("expand carriers", () => {
-    harness.expandCarrierSelectorCorpus();
+  bench("cleanup placed carrier states", () => {
+    harness.cleanupPlacedCarrierStates();
   });
 
   bench("normalize structured selectors", () => {
@@ -30,8 +30,8 @@ describe("scoped selector phase breakdown", () => {
     harness.placeExpandedCarrierStates();
   });
 
-  bench("cleanup placed carrier states", () => {
-    harness.cleanupPlacedCarrierStates();
+  bench("expand carriers", () => {
+    harness.expandCarrierSelectorCorpus();
   });
 });
 

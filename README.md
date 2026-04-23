@@ -121,6 +121,11 @@ pnpm bench
 pnpm bench:compare
 ```
 
+This compare suite is split into parity and non-parity cases. The parity groups
+compare cases that emit the same CSS. The non-parity groups show the cost of
+taking the more-correct path in cases where the older PostCSS path emits
+different CSS.
+
 - run only the internal Lightning end-to-end benchmarks:
 
 ```bash

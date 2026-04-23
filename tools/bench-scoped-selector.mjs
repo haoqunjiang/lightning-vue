@@ -6,10 +6,10 @@ import { dirname, join, relative, resolve } from "node:path";
 const repoRoot = process.cwd();
 const compilerRoot = resolve(repoRoot, "packages/compiler");
 const defaultBenchFiles = [
-  "__tests__/compileStyle.compare.bench.ts",
-  "__tests__/compileStyle.internal.bench.ts",
-  "__tests__/compileStyle.micro.bench.ts",
-  "__tests__/scopedSelector.bench.ts",
+  "bench/compileStyle.compare.bench.ts",
+  "bench/compileStyle.internal.bench.ts",
+  "bench/compileStyle.micro.bench.ts",
+  "bench/scopedSelector.bench.ts",
 ];
 
 const options = parseArgs(process.argv.slice(2));
@@ -172,23 +172,9 @@ function printSummary(aggregate, baseline, focusPattern) {
     ]),
   );
 
-  const hottest = [...filtered]
-    .sort((left, right) => right.medianMs - left.medianMs)
-    .slice(0, Math.min(filtered.length, 20));
-
   console.log("");
-  console.log("Top benchmarks by median time:");
-  for (const benchmark of hottest) {
-    const key = `${benchmark.file}::${benchmark.group}::${benchmark.name}`;
-    const baselineBenchmark = baselineMap.get(key);
-    const delta = baselineBenchmark
-      ? formatPercentDelta(benchmark.medianMs, baselineBenchmark.medianMs, true)
-      : "";
-    console.log(
-      `- ${benchmark.name}: ${formatMilliseconds(benchmark.medianMs)} median, ${formatHertz(benchmark.hz)}${delta}`,
-    );
-    console.log(`  ${benchmark.group}`);
-  }
+  console.log("Benchmarks by group (median time):");
+  printGroupedBenchmarkSummary(filtered, baselineMap);
 
   if (!baseline) {
     return;
@@ -213,14 +199,109 @@ function printSummary(aggregate, baseline, focusPattern) {
     .slice(0, Math.min(filtered.length, 15));
 
   console.log("");
-  console.log("Largest median-time deltas vs baseline:");
-  for (const { benchmark, deltaPercent } of changed) {
-    console.log(
-      `- ${benchmark.name}: ${formatMilliseconds(benchmark.medianMs)} (${formatSignedPercent(
-        deltaPercent,
-      )})`,
+  console.log("Largest median-time deltas vs baseline, grouped:");
+  printGroupedDeltaSummary(changed);
+}
+
+function splitGroupLabel(benchmark) {
+  const normalized = benchmark.group.startsWith(`${benchmark.file} > `)
+    ? benchmark.group.slice(benchmark.file.length + 3)
+    : benchmark.group;
+  const [suite, ...rest] = normalized.split(" > ");
+  return {
+    suite,
+    subgroup: rest.join(" > "),
+  };
+}
+
+function groupBenchmarksBySuite(benchmarks) {
+  const groups = new Map();
+  for (const benchmark of benchmarks) {
+    const { suite, subgroup } = splitGroupLabel(benchmark);
+    const suiteBucket = groups.get(suite) ?? new Map();
+    const subgroupKey = subgroup || benchmark.name;
+    const subgroupBucket = suiteBucket.get(subgroupKey) ?? [];
+    subgroupBucket.push(benchmark);
+    suiteBucket.set(subgroupKey, subgroupBucket);
+    groups.set(suite, suiteBucket);
+  }
+
+  return [...groups.entries()].sort(
+    (left, right) =>
+      Math.max(...[...right[1].values()].flat().map((benchmark) => benchmark.medianMs)) -
+      Math.max(...[...left[1].values()].flat().map((benchmark) => benchmark.medianMs)),
+  );
+}
+
+function printGroupedBenchmarkSummary(benchmarks, baselineMap) {
+  for (const [suite, subgroupMap] of groupBenchmarksBySuite(benchmarks)) {
+    console.log(`- ${suite}`);
+    const orderedSubgroups = [...subgroupMap.entries()].sort(
+      (left, right) =>
+        Math.max(...right[1].map((benchmark) => benchmark.medianMs)) -
+        Math.max(...left[1].map((benchmark) => benchmark.medianMs)),
     );
-    console.log(`  ${benchmark.group}`);
+    for (const [subgroup, members] of orderedSubgroups) {
+      const subgroupLabel = members[0].group.endsWith(` > ${subgroup}`) ? subgroup : null;
+      if (subgroupLabel) {
+        console.log(`  - ${subgroupLabel}`);
+      }
+      for (const benchmark of [...members].sort((left, right) => right.medianMs - left.medianMs)) {
+        const key = `${benchmark.file}::${benchmark.group}::${benchmark.name}`;
+        const baselineBenchmark = baselineMap.get(key);
+        const delta = baselineBenchmark
+          ? formatPercentDelta(benchmark.medianMs, baselineBenchmark.medianMs, true)
+          : "";
+        console.log(
+          `    - ${benchmark.name}: ${formatMilliseconds(benchmark.medianMs)} median, ${formatHertz(benchmark.hz)}${delta}`,
+        );
+      }
+    }
+  }
+}
+
+function groupDeltaEntriesBySuite(changed) {
+  const groups = new Map();
+  for (const entry of changed) {
+    const { suite, subgroup } = splitGroupLabel(entry.benchmark);
+    const suiteBucket = groups.get(suite) ?? new Map();
+    const subgroupKey = subgroup || entry.benchmark.name;
+    const subgroupBucket = suiteBucket.get(subgroupKey) ?? [];
+    subgroupBucket.push(entry);
+    suiteBucket.set(subgroupKey, subgroupBucket);
+    groups.set(suite, suiteBucket);
+  }
+
+  return [...groups.entries()].sort(
+    (left, right) =>
+      Math.max(...[...right[1].values()].flat().map((entry) => Math.abs(entry.deltaPercent))) -
+      Math.max(...[...left[1].values()].flat().map((entry) => Math.abs(entry.deltaPercent))),
+  );
+}
+
+function printGroupedDeltaSummary(changed) {
+  for (const [suite, subgroupMap] of groupDeltaEntriesBySuite(changed)) {
+    console.log(`- ${suite}`);
+    const orderedSubgroups = [...subgroupMap.entries()].sort(
+      (left, right) =>
+        Math.max(...right[1].map((entry) => Math.abs(entry.deltaPercent))) -
+        Math.max(...left[1].map((entry) => Math.abs(entry.deltaPercent))),
+    );
+    for (const [subgroup, members] of orderedSubgroups) {
+      const subgroupLabel = members[0].benchmark.group.endsWith(` > ${subgroup}`) ? subgroup : null;
+      if (subgroupLabel) {
+        console.log(`  - ${subgroupLabel}`);
+      }
+      for (const { benchmark, deltaPercent } of [...members].sort(
+        (left, right) => Math.abs(right.deltaPercent) - Math.abs(left.deltaPercent),
+      )) {
+        console.log(
+          `    - ${benchmark.name}: ${formatMilliseconds(benchmark.medianMs)} (${formatSignedPercent(
+            deltaPercent,
+          )})`,
+        );
+      }
+    }
   }
 }
 

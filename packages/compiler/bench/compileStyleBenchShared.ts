@@ -16,6 +16,23 @@ export const simpleScopedSource = Array.from(
   (_, index) => `.card-${index} .title-${index}:where(:hover) > * { color: red; }`,
 ).join("\n");
 
+export const nestedSelectorScopedSource = Array.from(
+  { length: 40 },
+  (_, index) =>
+    `.card-${index} {
+  color: red;
+  .title-${index} {
+    color: blue;
+  }
+  &.active-${index} {
+    color: green;
+  }
+  > .meta-${index} {
+    color: black;
+  }
+}`,
+).join("\n");
+
 export const vueScopedFunctionSource = Array.from({ length: 40 }, (_, index) =>
   [
     `.root-${index} :deep(.inner-${index} .copy-${index}) { color: red; }`,
@@ -25,36 +42,65 @@ export const vueScopedFunctionSource = Array.from({ length: 40 }, (_, index) =>
   ].join("\n"),
 ).join("\n");
 
-export const nestedScopedSource = Array.from(
+export const nestedAtRuleScopedSource = Array.from(
   { length: 40 },
   (_, index) =>
     `.card-${index} {
   color: red;
   @media (max-width: 800px) {
     color: blue;
-    .title-${index} {
-      color: green;
-    }
   }
-  .body-${index} {
-    color: black;
+  @supports (display: grid) {
+    display: grid;
+  }
+  @container card-${index} (inline-size > 30rem) {
+    color: green;
   }
 }`,
 ).join("\n");
 
-export const nestedCarrierScopedSource = Array.from({ length: 20 }, (_, index) =>
+export const animationScopedSource = Array.from({ length: 20 }, (_, index) =>
+  [
+    `.anim-name-${index} { animation-name: fade-${index}; }`,
+    `.anim-short-${index} { animation: fade-${index} 1s linear; }`,
+    `.anim-webkit-${index} { -webkit-animation: fade-${index} 1s linear; }`,
+    `@keyframes fade-${index} {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}`,
+    `@-webkit-keyframes fade-${index} {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}`,
+  ].join("\n"),
+).join("\n");
+
+export const logicalWrapperScopedSource = Array.from({ length: 20 }, (_, index) =>
+  [
+    `:not(.foo-${index} :deep(.bar-${index})) { color: red; }`,
+    `:has(.foo-${index} :deep(.bar-${index})) { color: blue; }`,
+    `:not(:deep(.foo-${index})) .bar-${index} { color: green; }`,
+    `.card-${index} :is(.header-${index} :deep(.icon-${index})) { color: black; }`,
+  ].join("\n"),
+).join("\n");
+
+export const nestedAtRuleCarrierScopedSource = Array.from({ length: 20 }, (_, index) =>
   [
     `:slotted(.slot-${index}) {
-  .inner-${index} { color: red; }
   @media (max-width: 800px) {
-    .leaf-${index} { color: blue; }
+    .leaf-${index} { color: red; }
+  }
+  @supports (display: grid) {
+    .grid-${index} { color: blue; }
+  }
+  @container card-${index} (inline-size > 30rem) {
+    .item-${index} { color: green; }
   }
 }`,
     `:not(:deep(.branch-${index})) {
-  .copy-${index} { color: green; }
-}`,
-    `.root-${index} {
-  :global(.external-${index}) { color: black; }
+  @media print {
+    .copy-${index} { color: purple; }
+  }
 }`,
   ].join("\n"),
 ).join("\n");
@@ -77,6 +123,22 @@ export const mixedRealisticScopedSource = Array.from({ length: 20 }, (_, index) 
 }`,
     `.wrapper-${index} {
   :global(.external-${index}) { color: black; }
+}`,
+  ].join("\n"),
+).join("\n");
+
+export const animationFallbackScopedSource = Array.from({ length: 20 }, (_, index) =>
+  [
+    `.anim-name-${index} { animation-name: var(--anim-${index}, fade-${index}); }`,
+    `.anim-short-${index} { animation: var(--anim-${index}, fade-${index}) 1s linear; }`,
+    `.anim-webkit-${index} { -webkit-animation: var(--anim-${index}, fade-${index}) 1s linear; }`,
+    `@keyframes fade-${index} {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}`,
+    `@-webkit-keyframes fade-${index} {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }`,
   ].join("\n"),
 ).join("\n");
@@ -130,13 +192,24 @@ export function compileWithLightningCssUsingNormalizedNestedScoping(source: stri
   });
 }
 
-export const normalizedNestedSource = normalizeNestedStyleBlocks(
-  nestedScopedSource,
+export const normalizedNestedSelectorSource = normalizeNestedStyleBlocks(
+  nestedSelectorScopedSource,
   "bench.css",
 ).code;
 
-export const loweredNormalizedNestedSource = new TextDecoder().decode(
-  transformWithLightningCss(normalizedNestedSource, {
+export const normalizedNestedAtRuleSource = normalizeNestedStyleBlocks(
+  nestedAtRuleScopedSource,
+  "bench.css",
+).code;
+
+export const loweredNormalizedNestedSelectorSource = new TextDecoder().decode(
+  transformWithLightningCss(normalizedNestedSelectorSource, {
+    include: Features.Nesting,
+  }),
+);
+
+export const loweredNormalizedNestedAtRuleSource = new TextDecoder().decode(
+  transformWithLightningCss(normalizedNestedAtRuleSource, {
     include: Features.Nesting,
   }),
 );
