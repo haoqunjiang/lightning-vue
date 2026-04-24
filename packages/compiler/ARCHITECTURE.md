@@ -1,170 +1,203 @@
 # Architecture
 
-`@lightning-vue/compiler` is a drop-in style-compiler replacement for
-`@vue/compiler-sfc`.
+`@lightning-vue/compiler` replaces the PostCSS-backed style compilation path
+from `@vue/compiler-sfc` with a Lightning CSS-backed implementation. The public
+style compiler API stays compatible with the supported Vue SFC surface.
 
-Its job is narrow but difficult:
+The runtime split is fixed: JavaScript handles Vue policy, and Lightning CSS
+handles generic CSS work. JavaScript decides scope placement, source
+preparation, and the few post-transform repairs Vue needs. Lightning CSS parses
+CSS, lowers nesting, serializes output, normalizes animation syntax, and handles
+CSS Modules.
 
-- keep the public `compiler-sfc` style API
-- preserve Vue scoped-style semantics
-- use Lightning CSS for the expensive CSS work
-- stay faster than the PostCSS-based pipeline on the common cases
+## Why It Is Fast
 
-The important consequence is that this package is **not** a pure Lightning CSS
-visitor implementation.
+The compiler is fast because Lightning CSS handles the generic CSS work.
+JavaScript handles Vue policy: source analysis, scope placement, nested context,
+and the small post-transform repairs Vue needs.
 
-It is a **source-first compiler pipeline** with three kinds of work:
+The common route follows four rules:
 
-1. cheap source analysis and source rewrites
-2. a Lightning CSS transform
-3. an optional post-transform animation cleanup stage
+- Source analysis runs once, then `CompileState`, `sourceScopeMode`, and
+  `TransformPlan` carry those facts through the session.
+- Source rewrites encode Vue decisions before Lightning CSS runs when the
+  rewrite can stay narrow.
+- `TransformPlan.selectorsScopedInSource` tells
+  `createLightningCssStyleVisitor` when selector callbacks can be skipped.
+- Shared source scanning and light parsing live in `@lightning-vue/utils`, so
+  hot paths avoid repeated full-source scans.
 
-That shape is more complex than a single AST pass, but it consistently
-benchmarks better for Vue SFC styles.
+Lightning CSS selector visitors cross the Rust/JavaScript boundary for
+selector-level work. Broad visitor use shows up as a slow path in headroom
+benches. Visitor scoping is a fallback. Ordinary scoped selectors are rewritten
+before the transform.
 
-## What This Package Owns
+Regular expressions enter hot paths after measurement. Native regexp engines can
+outperform handwritten JavaScript scans, and regexp code can be easier to audit.
+Sophisticated matching is benchmarked against a small scanner before becoming a
+routing dependency. Repeated full-source regexp passes have caused regressions
+in this compiler.
 
-This package only replaces style compilation:
+## Measurement Model
 
-- `compileStyle(...)`
-- `compileStyleAsync(...)`
-- `compileStyleWithLightningCss(...)`
+The headroom benchmark separates native work from JavaScript work in the
+compiler.
 
-Everything else is re-exported from `@vue/compiler-sfc`.
+| Row                  | Measurement                                                        | Reading                                                 |
+| -------------------- | ------------------------------------------------------------------ | ------------------------------------------------------- |
+| authored CSS         | Lightning CSS transform on the original benchmark source           | raw transform baseline for the authored corpus          |
+| handoff transform    | Lightning CSS transform on `TransformPlan.code`                    | native transform portion inside the full compiler route |
+| forced selector hook | authored CSS transformed with an empty `Selector` visitor callback | selector-hook boundary cost for visitor-based routes    |
+| full compiler        | validation, preparation, planning, transform, decode, finalization | actual package cost for the same corpus                 |
 
-The main entrypoint is
-[src/compileStyle.ts](./src/compileStyle.ts).
+The primary headroom number is time-based:
 
-The browser-facing entrypoint is
-[src/browser.ts](./src/browser.ts). The Node and browser compilers keep their
-option validation, runtime loading, and preprocessing policy separate, but they
-share the same middle pipeline in
-[src/compileSession/](./src/compileSession/):
+```text
+compiler JS overhead =
+  (full compiler time - handoff transform time) / full compiler time
+```
 
-- build a `CompileSession`
-- prepare source-only rewrites
-- derive a `TransformPlan` and run Lightning CSS
-- finalize the public `SFCStyleCompileResults`
+The handoff transform is faster or slower than authored CSS depending on the
+source that preparation creates. Nested normalization, source scoping, and Vue
+carrier expansion can change parse shape before Lightning CSS sees the input.
 
-## First Principles
+The PostCSS comparison benches show product-level speedup against Vue's current
+style compiler path. `bench:headroom` points at the remaining JavaScript cost.
 
-There are three constraints that drive the design:
-
-1. Lightning CSS understands CSS, but it does not understand Vue-specific
-   selector semantics such as `:deep(...)`, `:slotted(...)`, and `:global(...)`.
-2. Vue scoped styles involve more than adding `[data-v-xxx]` everywhere.
-   Nested rules, deep boundaries, slot scope, and global escapes all affect
-   where the scope attribute is allowed to appear.
-3. For performance, we do not want every stylesheet to pay for a full AST-based
-   scoped rewrite when most styles are ordinary local selectors.
-
-So the package is built around a simple rule:
-
-- do the cheapest correct thing first
-- escalate to heavier work when the stylesheet needs it
-
-## End-to-End Flow
+## Runtime Flow
 
 ```mermaid
 flowchart TD
-  A[Raw SFC style source] --> B[Validate options<br/>preprocess if needed]
-  B --> C[Reject legacy Vue scoped syntax]
-  C --> D[Analyze source<br/>nested selector children?<br/>nested at-rule children?<br/>carriers? animation? keyframes?]
-  D --> E[Rewrite v-bind CSS vars]
-  E --> F{scoped + nested rules?}
-  F -- yes --> G[Normalize nested blocks in source]
-  F -- no --> H
-  G --> H[Try source-level selector scoping]
-  H --> I[Lightning CSS transform<br/>lower nesting, CSS modules, serialize]
-  I --> J{local keyframes renamed?}
-  J -- yes --> K[Rewrite normalized animation references]
-  J -- no --> L
-  K --> L[Assemble final result]
+  A[Raw SFC style source] --> B[Validate options<br/>run preprocessors]
+  B --> C[Create CompileSession]
+  C --> D[analyzeLightningCssStyle]
+  D --> E[prepareCompileSessionForTransform]
+  E --> F[Reject legacy scoped syntax]
+  F --> G[Rewrite v-bind CSS vars]
+  G --> H{Scoped nesting needs Vue normalization?}
+  H -- yes --> I[normalizeNestedStyleBlocks]
+  H -- no --> J
+  I --> J[createTransformPlan]
+  J --> K{Source scoping succeeds?}
+  K -- yes --> L[Handoff CSS with scoped selector preludes]
+  K -- visitor fallback --> M[Handoff CSS plus selector visitor]
+  L --> N[Lightning CSS transform]
+  M --> N
+  N --> O[finalizeCompileSuccess]
+  O --> P[Rewrite normalized animation references when needed]
+  P --> Q[SFCStyleCompileResults]
 ```
 
-The fast path is:
+[src/compileStyle.ts](./src/compileStyle.ts) and
+[src/browser.ts](./src/browser.ts) define the runtime boundary. Both entrypoints
+enter the shared compile-session pipeline in
+[src/compileSession/](./src/compileSession/).
 
-- no preprocessors
-- no nested rules
-- no scoped selector specials
-- no local keyframes
+## Route Selection
 
-That path stays almost entirely in cheap source rewrites plus one Lightning CSS
-transform.
+The compiler is a route selector around Lightning CSS. Each route decides which
+Vue work runs in JavaScript and which CSS work goes to the native transform.
 
-## The Stages
+| Input shape                                               | Route                                       | JavaScript work                                                 | Lightning CSS work                                  |
+| --------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------- |
+| Plain unscoped CSS                                        | direct transform                            | option validation and preprocessing                             | parse, lower, serialize                             |
+| Scoped CSS with ordinary selectors                        | simple source scoping                       | inject `[data-v-xxx]` in selector preludes                      | parse, lower, serialize                             |
+| Scoped local nested selectors                             | prepared local nested source                | normalize nested source and emit scoped local selector preludes | lower final CSS nesting, serialize                  |
+| Scoped nested at-rule-only CSS                            | source scoping + Lightning nesting lowering | scope outer selector preludes                                   | lower nested at-rules, serialize                    |
+| Scoped selectors with `:deep`, `:slotted`, or `:global`   | parsed source scoping with marker IR        | expand Vue carriers and place scope attributes                  | parse, lower, serialize                             |
+| Source scoping failure or CSS Modules visitor requirement | Lightning selector visitor fallback         | run scoped selector policy through visitor callbacks            | parse, visitor traversal, lower, serialize          |
+| Scoped local keyframes with animation declarations        | post-transform animation rewrite            | patch normalized animation references                           | keyframe renaming and animation shorthand normalize |
 
-### 1. Validate and Preprocess
+`sourceScopeMode` records the pre-transform selector scoping mode:
 
-`compileStyle.ts` first validates the supported option surface. This package is
-strict: unsupported PostCSS-specific features fail fast. There is no silent
-fallback.
+- `simple`: selector preludes can be scoped directly from source text.
+- `parsed`: selector preludes need the scoped selector pipeline.
+- `prepared-local`: nested normalization already emitted scoped local selector
+  source.
 
-If the style uses Sass, Less, or Stylus, preprocessing runs before any CSS
-analysis so the rest of the pipeline always sees plain CSS.
+`TransformPlan.selectorsScopedInSource` records the result of route selection.
+When it is `true`, `createLightningCssStyleVisitor` returns no selector hook for
+scoped rewriting.
 
-`browser.ts` applies the same style-option philosophy, but with a narrower
-surface:
+## Phase Boundaries
 
-- no preprocessors
-- no CSS modules
-- no PostCSS-specific plugin pipeline
+| Phase                   | Owner          | State crossing the boundary                                                      |
+| ----------------------- | -------------- | -------------------------------------------------------------------------------- |
+| Session creation        | `session.ts`   | `CompileContext`, initial `CompileState`                                         |
+| Source preparation      | `prepare.ts`   | rewritten `source`, `map`, `analysis`, `sourceScopeMode`                         |
+| Transform planning      | `transform.ts` | `TransformPlan` with code, nesting flag, CSS Modules config, source-scoping flag |
+| Lightning CSS transform | `transform.ts` | transformed code, source map, CSS Modules exports                                |
+| Finalization            | `finalize.ts`  | scoped keyframe analysis, public `SFCStyleCompileResults`                        |
 
-After that edge-specific validation, it rejoins the same shared compile-session flow
-as the Node entrypoint.
+State values crossing phases:
 
-### 2. Reject Legacy Vue Scoped Syntax
+- `analysis`: source facts collected before preparation
+- `source`: current source after source-only preparation
+- `sourceScopeMode`: selector scoping route selected for the current source
+- `TransformPlan.code`: handoff CSS for Lightning CSS
+- `TransformPlan.selectorsScopedInSource`: selector visitor scoping switch
+- `analysis.keyframes`: local keyframe rename map used after Lightning CSS
+  normalization
 
-Legacy syntax such as `>>>`, `/deep/`, or `::v-deep` is rejected early in
-[scoped/legacy.ts](./src/style/lightningcss/scoped/legacy.ts).
+## Source Analysis And Utilities
 
-This is a deliberate maintenance choice. Supporting the old syntax would add
-parsing branches to the hot path for no real benefit.
+[analysis.ts](./src/style/lightningcss/analysis.ts) gathers routing facts:
 
-### 3. Analyze the Source
+- nested selector children
+- nested at-rule children
+- selector descendants inside nested at-rules
+- modern Vue scope carriers
+- animation declarations
+- local `@keyframes` names
+- `v-bind(...)` usage
 
-[analysis.ts](./src/style/lightningcss/analysis.ts) is a cheap routing stage.
-It answers:
+The structural source walk lives in `@lightning-vue/utils`. The same walk
+collects nesting facts and local keyframe names, so compile-session routing can
+reuse those facts later.
 
-- does this stylesheet contain direct nested selector children?
-- does it contain direct nested at-rule children?
-- do those nested at-rules contain deeper selector descendants?
-- does it contain modern Vue scope carriers?
-- does it contain animation declarations?
-- which local `@keyframes` names will be renamed?
-- does it contain `v-bind(...)`?
+`@lightning-vue/utils` provides generic mechanics:
 
-The nested summary comes from a structural source walk in
-`@lightning-vue/utils`, and the same pass also collects local keyframe names.
-That keeps the routing facts explicit without paying for a full block tree
-unless the stylesheet needs nested normalization.
+- source block scanning
+- selector-prelude walking
+- source-range helpers
+- direct selector-prelude scoping
+- selector parsing and stringifying helpers
+- lightweight block-tree helpers for nested-source transforms
 
-### 4. Rewrite `v-bind(...)`
+`@lightning-vue/compiler` applies Vue policy:
 
-`v-bind(...)` CSS vars are still handled at the source layer. This is cheap,
-stable, and easy to map back to original source locations.
+- `:deep(...)`, `:slotted(...)`, and `:global(...)` semantics
+- scope injection rules
+- nested context propagation
+- prepared-local routing
+- compatibility failures
 
-### 5. Normalize Nested Blocks
+Reusable lexing and simple parsing primitives live outside the compiler.
+Vue-specific behavior lives in compile-session routing and scoped selector
+modules.
 
-If the style is `scoped` and its nested summary says the stylesheet needs
-nested normalization, the package normalizes nested blocks **before** selector
-scoping in
-[nesting/normalize.ts](./src/style/lightningcss/nesting/normalize.ts).
+## Nested Scoped CSS
 
-This is one of the most important design decisions in the package.
+Lightning CSS lowers CSS nesting quickly. Vue scoped styles add placement rules
+for `[data-v-xxx]`. The compiler reshapes Vue-sensitive nested source before
+Lightning CSS lowers it.
 
-Plain local nested-at-rule-only cases skip this pass. They go straight to the
-source-level selector rewrite and let Lightning CSS lower the remaining
-nesting. The normalizer still runs for cases that need more context than a
-plain local nested-at-rule tree, including:
+Nesting lowering serves the compiler algorithm, independent of target browser
+support. `normalizeNestedStyleBlocks` can introduce compile-time structure such
+as `:global(.foo)` context wrappers and `& { ... }` declaration wrappers.
+Lightning CSS then resolves that prepared nested source into concrete selectors.
+Preserving nested syntax in the output would either leak compile-time structure
+or require a JavaScript implementation of the same selector-combination step.
+
+Normalization runs for scoped nesting with Vue context:
 
 - direct nested selector children
-- deep/slotted/global context that must flow through nested at-rules
+- Vue scope carriers whose context flows through nested at-rules
 
-The normalizer does not lower nesting syntax to final flat CSS. Instead, it
-rewrites the source into a shape that later selector scoping can reason about.
+Plain local nested-at-rule-only cases skip normalization. They use source
+selector scoping first, then Lightning CSS lowers the nested at-rules.
 
-Example:
+Authored CSS:
 
 ```css
 .foo {
@@ -175,7 +208,7 @@ Example:
 }
 ```
 
-is normalized into the equivalent of:
+Normalized source shape:
 
 ```css
 :global(.foo) {
@@ -188,465 +221,196 @@ is normalized into the equivalent of:
 }
 ```
 
-Why that odd shape?
+The outer `.foo` remains the nesting boundary. The original declarations move
+into `& { ... }`, which compiles to:
 
-- the parent `.foo` rule is acting as a **nesting boundary**
-- its own declarations still need to compile to `.foo[data-v] { ... }`
-- but its nested descendants should compile to `.foo .bar[data-v]`, not
-  `.foo[data-v] .bar[data-v]`
+```css
+.foo[data-v-xxx] {
+  color: red;
+}
+```
 
-So the normalizer:
+The nested `.bar` inherits `.foo` as context and receives the local scope:
 
-- analyzes the nesting context established by each selector in
-  [nesting/contextAnalysis.ts](./src/style/lightningcss/nesting/contextAnalysis.ts)
-- builds explicit block-local rewrite instructions in
-  [nesting/instructions.ts](./src/style/lightningcss/nesting/instructions.ts)
-- applies those instructions source-to-source in
-  [nesting/normalize.ts](./src/style/lightningcss/nesting/normalize.ts)
+```css
+.foo .bar[data-v-xxx] {
+  color: blue;
+}
+```
 
-Those instructions answer four questions:
+The nested pipeline has three modules:
 
-- whether declarations need an explicit `& { ... }` wrapper
-- whether the current rule should stop carrying declarations and only define
-  the outer nesting boundary, with those declarations moved into `& { ... }`
-- which context child style rules and child at-rules inherit
-- whether the same pass can already emit source whose local selectors carry
-  the scope attribute, such as `&[data-v-xxx]` and `.bar[data-v-xxx]`, so the
-  later generic source-scoping walk can skip that tree
+| Module                                                                            | Responsibility                                        |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [nesting/contextAnalysis.ts](./src/style/lightningcss/nesting/contextAnalysis.ts) | read selector context established by each nested rule |
+| [nesting/instructions.ts](./src/style/lightningcss/nesting/instructions.ts)       | record block-local rewrite instructions               |
+| [nesting/normalize.ts](./src/style/lightningcss/nesting/normalize.ts)             | apply those instructions as a source rewrite          |
 
-For most nested styles, `normalize.ts` just applies those instructions. On
-plain local nested trees, it also derives the scope-attribute rewrites from
-them so that the same pass can emit source whose local selectors already carry
-the scope attribute.
+The instruction phase decides whether declarations need an `& { ... }` wrapper,
+which child blocks inherit context, and whether normalization can emit
+`prepared-local` source. `prepared-local` means normalized nested selector
+preludes already contain the local scope attribute; `createTransformPlan` can
+pass that source to Lightning CSS without the generic source-scoping walk.
 
-This stage stays source-based because it benchmarks better than the AST-heavy
-alternative for carrier-heavy nested styles.
+## Marker IR
 
-## The Scoped Selector Model
+Vue scope carriers need placement decisions that ordinary CSS selectors cannot
+encode directly during source rewriting:
 
-The scoped rewrite is the conceptual core of the package.
+- `:global(...)` removes normal local scope injection from that branch
+- `:deep(...)` freezes the local injection anchor
+- `:slotted(...)` applies slot scope to its payload
 
-### Scope Carriers
-
-The modern Vue carriers are defined in
-[scopeCarriers.ts](./src/style/lightningcss/scopeCarriers.ts):
-
-- `:deep(...)`
-- `:slotted(...)`
-- `:global(...)`
-
-These are not rewritten directly into final selectors. Instead, the compiler
-first lowers them into an internal selector form.
-
-### Why There Is an Internal Marker IR
-
-Vue scoping needs intermediate signals that do not exist in real CSS:
-
-- “this branch must not receive the normal scope attribute”
-- “the deep boundary is here; do not move the injection anchor past this point”
-
-So the scoped selector pipeline uses two temporary internal marker attributes:
+The scoped selector pipeline represents those decisions with temporary selector
+markers:
 
 - `[__VUE_SCOPE_NO_INJECT__]`
 - `[__VUE_SCOPE_DEEP__]`
 
-They are never emitted in final CSS. They only exist during rewriting.
+Final CSS contains no temporary markers.
 
-Do not confuse these with the **source-level no-inject carrier** used by
-nested normalization. The normalizer rewrites a context-only selector like
-`.foo` into `:global(.foo)` because `:global(...)` is already a real Vue escape
-hatch meaning “keep this selector branch, but do not inject local scope onto
-it”. Later, when that source is parsed for scoped rewriting, `:global(...)`
-lowers into the internal `[__VUE_SCOPE_NO_INJECT__]` marker.
+Marker IR improves performance by moving Vue carrier handling before the
+Lightning CSS transform. `scopeLightningCssSource` parses each selector prelude,
+expands carriers, places scope attributes, removes markers, and writes the
+cleaned selector back into the source string. The handoff CSS contains ordinary
+selectors, so `createLightningCssStyleVisitor` has no scoped selector work to
+do.
 
-### The Scoped Selector Pipeline
+The visitor path calls back into JavaScript while Lightning CSS traverses
+selectors. Source rewriting pays the Vue-placement cost before the transform,
+then hands Lightning CSS a selector tree that needs no selector callbacks.
 
-The scoped rewrite is split into:
+The markers are selector attributes, so the existing selector parser,
+stringifier, and source-rewrite utilities can carry them through `:is(...)`,
+`:where(...)`, `:has(...)`, and nested selector containers. Placement reads
+deep/no-inject state from the selector tree during the same pass. No side table
+has to track carrier state for each branch.
 
-- [scoped/rewrite.ts](./src/style/lightningcss/scoped/rewrite.ts)
-- [scoped/selector/direct.ts](./src/style/lightningcss/scoped/selector/direct.ts)
-- [scoped/selector/expansion.ts](./src/style/lightningcss/scoped/selector/expansion.ts)
-- [scoped/selector/placement/](./src/style/lightningcss/scoped/selector/placement)
-
-There are two selector paths:
-
-- **direct path**
-  selectors with no Vue carriers can inject `[data-v-xxx]` immediately
-- **expanded path**
-  selectors with `:deep(...)`, `:slotted(...)`, `:global(...)`, or mixed
-  `:is(...)` / `:where(...)` structure first become explicit internal states
-
-The expanded path has three stages:
-
-1. **expansion**
-2. **placement**
-3. **cleanup**
-
-#### 1. Expansion
-
-Expansion turns Vue syntax into ordinary selector states plus internal markers.
-
-Examples:
-
-```css
-:global(.btn);
-```
-
-becomes conceptually:
+For `:global(.btn)`, expansion produces a conceptual selector like:
 
 ```css
 [__VUE_SCOPE_NO_INJECT__] .btn
 ```
 
-meaning:
+The placement phase reads the marker and leaves `.btn` without local scope.
 
-- keep `.btn`
-- do not inject `[data-v-xxx]` onto this selector branch
-
-```css
-.panel: deep(.title);
-```
-
-becomes conceptually:
+For `.panel :deep(.title)`, expansion produces a conceptual selector like:
 
 ```css
 .panel [__VUE_SCOPE_DEEP__] .title
 ```
 
-meaning:
-
-- scope the `.panel` side normally
-- everything to the right of the deep boundary is outside normal local scoping
-
-`:slotted(...)` is the one eager special case:
-
-- its inner selector is immediately given the slot scope attribute
-- then a no-inject marker is prepended so the later placement phase does not
-  inject a second scope attribute on top of it
-
-Expansion produces an explicit `ExpandedScopedSelector` state:
-
-- `selector`
-- `deep`
-- `placement`
-
-That state is the handoff between expansion and placement.
-
-It exists so placement does not have to rediscover the same facts from raw
-selector syntax on every pass.
-
-`placement` is one named plan value, not two unrelated flags:
-
-- `direct`
-  place scope immediately
-- `rewrite-nested`
-  place scope immediately, then revisit nested `:is(...)` / `:where(...)`
-- `normalize-and-rewrite`
-  split mixed same-element / descendant structure before placement, then do the
-  same nested rewrite pass
-
-One subtle rule is important here: an inner `normalize-and-rewrite` plan does
-not automatically escape through an outer `:deep(...)` boundary. Once a branch
-has already crossed into the unscoped side of an outer deep carrier, placement
-still needs nested cleanup, but it must not re-normalize the outer selector as
-if that inner branch were still local.
-
-When placement later recurses into a bare nested selector, it runs one small
-classifier to recover that same plan from syntax. Keeping that as one contract
-avoids asking separate helpers for separate facts about the same selector.
-
-Placement does **not** keep carrying that whole state afterward.
-
-Once a real scope attribute has been inserted, the remaining contract is:
-
-- `selector`
-- `deep`
-
-That smaller post-placement result is what cleanup consumes. This keeps the
-phase boundary honest: cleanup should not depend on placement-time control
-fields that no longer matter.
-
-#### 2. Placement
-
-Once a selector is in the expanded form, the compiler can decide where to
-insert the real scope attribute:
-
-- normal scope: `[data-v-xxx]`
-- slot scope: `[data-v-xxx-s]`
-- no injection
-
-The key idea is the **injection anchor**:
-
-- find the rightmost selector component that should still belong to the local
-  branch
-- insert the scope attribute immediately after it
-- stop searching once a deep marker has been crossed
-
-Example:
-
-```css
-.panel [__VUE_SCOPE_DEEP__] .title
-```
-
-gets its anchor frozen at `.panel`, so the final effect is:
+Placement scopes the local side before the deep boundary:
 
 ```css
 .panel[data-v-xxx] .title
 ```
 
-not:
+The scoped selector pipeline has three phases:
 
-```css
-.panel .title[data-v-xxx]
-```
+1. **Expansion** lowers `:deep(...)`, `:slotted(...)`, and `:global(...)` into
+   selector states plus markers. Selector lists can fan out into multiple
+   states.
+2. **Placement** finds the local injection anchor and inserts `[data-v-xxx]` or
+   `[data-v-xxx-s]`. Deep and no-inject markers control where anchor search
+   stops.
+3. **Cleanup** removes all temporary markers, including markers inside selector
+   containers such as `:is(...)`, `:where(...)`, `:has(...)`, and `:not(...)`.
 
-and not:
+Marker IR limits JavaScript to Vue-specific placement. Lightning CSS still
+handles parsing, nesting lowering, and serialization.
 
-```css
-.panel[data-v-xxx] .title[data-v-xxx]
-```
+## Animation Rewrite
 
-Placement itself is split further:
+Animation/keyframe handling waits until after Lightning CSS. Lightning CSS
+renames scoped local keyframes and normalizes animation shorthands. The compiler
+records local keyframe names during source analysis. After Lightning CSS
+produces normalized CSS, the compiler patches remaining animation references in
+[scoped/animation/](./src/style/lightningcss/scoped/animation/).
 
-- [placement/structure.ts](./src/style/lightningcss/scoped/selector/placement/structure.ts)
-  decides whether selector structure must split before anchor selection
-- [placement/compound.ts](./src/style/lightningcss/scoped/selector/placement/compound.ts)
-  owns compound-level anchor checks and idempotent “already scoped?” logic
-- [placement/nested.ts](./src/style/lightningcss/scoped/selector/placement/nested.ts)
-  rewrites nested `:is(...)` / `:where(...)` branches after outer placement
-- [placement/index.ts](./src/style/lightningcss/scoped/selector/placement/index.ts)
-  coordinates placement itself, with one entrypoint for expanded selector
-  states and one for bare nested selectors encountered during placement
+The post-transform route has two stages:
 
-That split matters because the two callers are on different sides of the phase
-boundary:
+- scan normalized CSS and produce explicit rewrite spans
+- apply those spans to a string or `MagicString`
 
-- expansion hands placement a full `ExpandedScopedSelector`
-- nested placement recursion hands it a bare `Selector`, which is first
-  classified and only then routed through the same placement machinery
+The custom JavaScript stays limited to local keyframe references that survive
+Lightning CSS normalization.
 
-The two ideas to keep in mind are:
+## Public And Runtime Boundaries
 
-- selector placement plan answers:
-  can placement act directly, or must it normalize structure first, and will
-  nested containers need a second pass afterward?
-- nested scope context answers:
-  are we still on the local side, or already after `:deep(...)`, inside
-  `:slotted(...)`, or fully unscoped?
+The package replaces style compilation only:
 
-Those are different questions, and separating them is what keeps the placement
-code understandable.
+- `compileStyle(...)`
+- `compileStyleAsync(...)`
+- `compileStyleWithLightningCss(...)`
 
-#### 3. Cleanup
+Everything outside style compilation is re-exported from `@vue/compiler-sfc`.
 
-After the real scope attributes have been placed, the temporary markers are
-removed recursively, including inside selector containers such as `:is(...)`,
-`:where(...)`, `:has(...)`, and `:not(...)`.
+The Node entrypoint supports preprocessors and the compiler-sfc-compatible
+options accepted by this package. The browser entrypoint rejoins the same
+compile-session pipeline after a smaller validation surface:
 
-At that point the selector is ordinary CSS again.
+- no preprocessors
+- no CSS Modules
+- no PostCSS plugin pipeline
 
-## Source-Level Scoping vs Visitor Scoping
-
-The package prefers source-level scoping in
-[scoped/source.ts](./src/style/lightningcss/scoped/source.ts).
-
-That path is used when:
-
-- the style is `scoped`
-- CSS Modules are not enabled
-- the source rewrite succeeds
-
-It has three routes:
-
-- **simple source rewrite**
-  when analysis says there are no Vue carriers and no nested preparation is
-  needed, `scopeSelectorPrelude(...)` from `@lightning-vue/utils` can inject
-  `[data-v-xxx]` very cheaply
-- **`prepared-local` source route**
-  on plain local nested trees, when nested normalization can finish that
-  selector scoping work itself, the next stage receives source whose local
-  selectors already carry the scope attribute
-- **parsed source rewrite**
-  when carriers are present, selectors are parsed and the full scoped rewrite
-  pipeline runs
-
-If source scoping cannot handle the stylesheet, the compiler falls back to
-visitor-based selector rewriting inside Lightning CSS.
-
-That fallback exists for correctness, but the source path is the performance
-target.
+Unsupported PostCSS-specific style options fail fast. Legacy scoped selector
+syntax such as `>>>`, `/deep/`, `::v-deep(...)`, `::v-slotted(...)`, and
+`::v-global(...)` is rejected in
+[scoped/legacy.ts](./src/style/lightningcss/scoped/legacy.ts). Modern Vue
+carrier syntax is the supported scoped-selector model.
 
 ## Observability
 
-The codebase keeps the major style stages observable in tests instead of making
-them debugger-only concepts:
+Focused traces and debug exports expose the main phase boundaries:
 
-- `compileSession.trace.spec.ts`
-  traces the shared compile session, transform plan, and final result
-- `nestingNormalization.trace.spec.ts`
-  traces nested-block instructions and the final normalized source
-- `scopedSelector.trace.spec.ts`
-  traces selector expansion, placement, cleanup, and final scoped selectors
+| Surface                              | Boundary covered                                             |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `compileSession.trace.spec.ts`       | preparation, transform planning, finalization                |
+| `nestingNormalization.trace.spec.ts` | nested context, rewrite instructions, normalized source      |
+| `scopedSelector.trace.spec.ts`       | carrier expansion, scope placement, cleanup, final selectors |
+| `@lightning-vue/compiler/debug`      | reusable debug surfaces for internal playgrounds             |
 
-These traces cover the phase boundaries and cross-phase state. They do not try
-to mirror every implementation detail.
+The benchmark surfaces cover different layers:
 
-For interactive debugging, the scoped-selector and nesting traces are also
-available from the compiler's debug surface:
+- `bench:headroom` reports authored CSS transform, handoff transform, forced
+  selector hook, full compiler throughput, and compiler JS overhead on the same
+  corpora.
+- PostCSS comparison benches show user-facing speedup against Vue's current
+  style compiler path.
+- Focused microbenches locate source scanning, scoped selector placement,
+  nested normalization, and animation rewrite costs.
 
-- `@lightning-vue/compiler/debug`
+## Module Responsibilities
 
-The internal IR playground uses that same debug surface, so the tracing logic
-stays in one place.
+| Module                                     | Responsibility                                                              |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| `src/compileStyle.ts`                      | public style entrypoint, option validation, preprocessing, session creation |
+| `src/browser.ts`                           | browser runtime boundary and browser-only unsupported-option policy         |
+| `src/compileSession/prepare.ts`            | source-only preparation before Lightning CSS                                |
+| `src/compileSession/transform.ts`          | `TransformPlan`, source scoping, Lightning CSS transform options            |
+| `src/compileSession/finalize.ts`           | animation finalization and public result assembly                           |
+| `src/style/lightningcss/analysis.ts`       | source feature detection and keyframe rename collection                     |
+| `src/style/lightningcss/nesting/`          | source-based nested scoped normalization                                    |
+| `src/style/lightningcss/scoped/`           | Vue scoped selector policy and source/visitor scoped rewrites               |
+| `src/style/lightningcss/scoped/animation/` | normalized animation-reference rewrite                                      |
+| `src/style/preprocessors.ts`               | Sass, Less, and Stylus integration for compiler-sfc compatibility           |
+| `@lightning-vue/utils`                     | generic source scanning, selector parsing, and source rewrite primitives    |
 
-## What Lightning CSS Is Responsible For
+## Invariants
 
-After source rewrites, Lightning CSS is used for the parts it is good at:
-
-- parsing CSS
-- lowering nesting
-- serializing normalized CSS
-- CSS Modules compilation
-- any remaining selector visitor work when source scoping did not finish it
-
-The style visitor stays small. See
-[visitor.ts](./src/style/lightningcss/visitor.ts).
-
-The package does **not** try to encode all Vue semantics inside the Lightning
-CSS visitor. That approach was simpler conceptually, but slower in practice.
-
-## Why Animation Uses a Different Strategy
-
-Animation/keyframe handling is the main case where the package relies more on
-Lightning CSS.
-
-When scoped local keyframes are renamed:
-
-- the source analysis records the keyframe rename map
-- Lightning CSS does the expensive parsing and normalization first
-- the package then plans and applies a narrow post-transform source rewrite in
-  [scoped/animation/](./src/style/lightningcss/scoped/animation)
-- that rewrite has two small stages:
-  - a small planning pass that finds explicit rewrite spans in normalized CSS
-  - a small apply pass that patches either a string or a `MagicString`
-- [debug/animation.ts](./src/debug/animation.ts) shows that stage directly
-- the compile-session trace shows its before/after boundary
-
-Animation declarations benefit from Lightning CSS normalization. Unlike nested
-selector semantics, preserving raw authored source shape here was not worth the
-complexity. The remaining rewrite stays small because it only tracks normalized
-keyframe names.
-
-## Why This Package Is Not Simpler
-
-If simplicity were the only goal, we would likely choose one of these designs:
-
-- everything in a Lightning CSS AST visitor
-- everything as source-to-source rewriting
-
-The package does neither. It uses a hybrid:
-
-- source-based routing and rewriting on the hot path
-- Lightning CSS for parsing, lowering, serialization, and CSS Modules
-- a tiny post-transform fixup where that is cheaper than preserving source
-  trivia
-
-That means more moving parts, but it preserves the performance properties we
-care about:
-
-- cheap common-case scoped styles
-- fast nested carrier-heavy styles
-- fewer expensive visitor passes
-- predictable sourcemap behavior across preprocessors and rewrites
-
-## Module Guide
-
-### `src/compileStyle.ts`
-
-Top-level orchestration:
-
-- validate
-- preprocess
-- create the shared compile session
-- run the shared compile-session flow
-
-### `src/compileSession/`
-
-Shared compile-session stages used by both the Node and browser entrypoints:
-
-- `session.ts`
-  compile context, initial mutable state, and session creation
-- `prepare.ts`
-  pre-transform source preparation
-- `transform.ts`
-  transform-plan derivation, source scoping, and Lightning CSS transform setup
-- `finalize.ts`
-  animation cleanup and public result assembly
-- `modules.ts`
-  CSS modules result normalization
-
-### `src/style/lightningcss/analysis.ts`
-
-Cheap source feature detection and keyframe rename collection.
-
-### `src/style/lightningcss/scopeCarriers.ts`
-
-The syntax contract for modern Vue scope carriers.
-
-### `src/style/lightningcss/nesting/`
-
-Source-based nested normalization:
-
-- `contextAnalysis.ts`
-  nested deep/slot/local context analysis
-- `instructions.ts`
-  block-local normalization instructions
-- `normalize.ts`
-  source rewrite that applies those instructions
-
-### `src/style/lightningcss/scoped/`
-
-Vue-specific scoped-style policy.
-
-Important submodules:
-
-- `rewrite.ts`
-  selector-pipeline entrypoint
-- `selector/direct.ts`
-  cheap no-carrier path
-- `selector/expansion.ts`
-  carrier expansion into explicit selector states
-- `selector/placement/`
-  structure normalization, compound checks, nested rewriting, and cleanup
-- `source.ts`
-  parsed source-level scoping
-- `legacy.ts`
-  early legacy-syntax rejection
-
-### `src/style/lightningcss/scoped/animation/`
-
-Post-transform scoped keyframe and animation declaration rewrite.
-
-### `src/style/preprocessors.ts`
-
-Sass / Less / Stylus integration kept for `compiler-sfc` compatibility.
-
-## Boundary With `@lightning-vue/utils`
-
-`@lightning-vue/utils` owns generic mechanics:
-
-- selector parsing/stringifying
-- source-level selector rewriting
-- block tree walking
-- source text range helpers
-
-This package owns Vue policy:
-
-- what `:deep(...)`, `:slotted(...)`, and `:global(...)` mean
-- where scope may be injected
-- how nested context propagates
-- when a selector branch becomes context-only
-- which compatibility choices are accepted or rejected
-
-That boundary is deliberate. Moving Vue policy down into the utility package
-would make the shared layer harder to reason about and harder to reuse.
+- Source analysis facts are collected before preparation and reused across the
+  session; later phases avoid broad scans for facts already present in
+  `analysis`.
+- `sourceScopeMode` and `TransformPlan.selectorsScopedInSource` agree on
+  whether selector scoping has already happened in source.
+- `prepared-local` source contains scoped local selector preludes for the nested
+  rules it claims to prepare.
+- Nested source that passed through Vue scoped normalization still reaches
+  Lightning CSS for nesting resolution; browser support for CSS nesting leaves
+  that compiler phase in place.
+- Marker IR is removed before final CSS leaves the scoped selector pipeline.
+- Vue policy lives in `@lightning-vue/compiler`; generic source mechanics live
+  in `@lightning-vue/utils`.
+- Unsupported compatibility surfaces fail during validation or legacy syntax
+  checks, before expensive transform work starts.
