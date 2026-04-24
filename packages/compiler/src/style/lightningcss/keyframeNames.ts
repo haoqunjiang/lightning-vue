@@ -35,6 +35,10 @@ export function extractKeyframesPreludeName(prelude: string): string | null {
 }
 
 export function normalizeEscapedKeyframesName(name: string): string {
+  if (!name.includes("\\")) {
+    return name;
+  }
+
   let normalized = "";
 
   for (let index = 0; index < name.length; index++) {

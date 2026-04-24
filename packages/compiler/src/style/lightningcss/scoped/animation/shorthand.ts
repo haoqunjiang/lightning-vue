@@ -5,6 +5,10 @@ export function rewriteAnimationShorthandValue(
   value: string,
   keyframes: Record<string, string>,
 ): string {
+  if (!value.includes(",")) {
+    return rewriteAnimationShorthandComponent(value.trim(), keyframes);
+  }
+
   return splitTopLevelSegments(value, ",")
     .map((part) => rewriteAnimationShorthandComponent(part.trim(), keyframes))
     .join(", ");
@@ -19,14 +23,14 @@ function rewriteAnimationShorthandComponent(
     return value;
   }
 
-  const nextTokens = tokens.slice();
   // On normalized Lightning CSS output, explicit animation names are serialized
   // in the final token position.
   const lastTokenIndex = tokens.length - 1;
-  const rewrittenLastToken = rewriteAnimationNameValue(nextTokens[lastTokenIndex], keyframes);
-  if (rewrittenLastToken !== nextTokens[lastTokenIndex]) {
-    nextTokens[lastTokenIndex] = rewrittenLastToken;
-    return nextTokens.join(" ");
+  const lastToken = tokens[lastTokenIndex];
+  const rewrittenLastToken = rewriteAnimationNameValue(lastToken, keyframes);
+  if (rewrittenLastToken !== lastToken) {
+    tokens[lastTokenIndex] = rewrittenLastToken;
+    return tokens.join(" ");
   }
 
   return value;

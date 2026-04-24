@@ -5,6 +5,10 @@ export function rewriteAnimationNameValue(
   value: string,
   keyframes: Record<string, string>,
 ): string {
+  if (!value.includes(",")) {
+    return rewriteAnimationNameComponent(value.trim(), keyframes);
+  }
+
   return splitTopLevelSegments(value, ",")
     .map((part) => rewriteAnimationNameComponent(part.trim(), keyframes))
     .join(", ");

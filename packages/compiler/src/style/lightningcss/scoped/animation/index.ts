@@ -23,45 +23,20 @@ export interface PlannedAnimationReferenceRewrite {
   text: string;
 }
 
-interface AnimationRewritePattern {
-  kind: PlannedAnimationReferenceRewriteKind;
-  regex: RegExp;
-  rewriteValue: (value: string, keyframes: Record<string, string>) => string | undefined;
-}
-
-// These regex scans run on Lightning CSS's normalized output, not raw authored
-// source. At that stage, animation declarations are flattened into plain
-// top-level declarations and explicit keyframe names are serialized into a
-// predictable token shape, which makes this cheap text rewrite stable enough
-// for the supported surface. Each pattern names the rewritten span as `value`,
-// so the planner can recover the exact byte range from `match.indices`.
-//
-// These patterns target disjoint surfaces:
-// - keyframe preludes
-// - animation-name declarations
-// - animation shorthand declarations
-//
-// The planned rewrite ranges stay non-overlapping, so the public compile path
-// does not need another validation pass here.
-const animationRewritePatterns: AnimationRewritePattern[] = [
-  {
-    kind: "keyframes-prelude",
-    regex: /(^|})\s*@(?:-\w+-)?keyframes\s+(?<value>[^\s{;]+)/dgim,
-    rewriteValue: rewriteRawAnimationIdentifier,
-  },
-  {
-    kind: "animation-name-declaration",
-    regex: /(^|[;{])\s*(?:-\w+-)?animation-name\s*:\s*(?<value>[^;}]*)/dgim,
-    rewriteValue: (value, keyframes) =>
-      rewriteNormalizedAnimationDeclarationValue(value, keyframes, rewriteAnimationNameValue),
-  },
-  {
-    kind: "animation-shorthand-declaration",
-    regex: /(^|[;{])\s*(?:-\w+-)?animation\s*:\s*(?<value>[^;}]*)/dgim,
-    rewriteValue: (value, keyframes) =>
-      rewriteNormalizedAnimationDeclarationValue(value, keyframes, rewriteAnimationShorthandValue),
-  },
-];
+const keyframesPreludePattern = String.raw`(^|})\s*@(?:-\w+-)?keyframes\s+([^\s{;]+)`;
+const animationNameDeclarationPattern = String.raw`(^|[;{])\s*(?:-\w+-)?animation-name\s*:\s*([^;}]*)`;
+const animationShorthandDeclarationPattern = String.raw`(^|[;{])\s*(?:-\w+-)?animation\s*:\s*([^;}]*)`;
+const normalizedAnimationReferenceRE = new RegExp(
+  [
+    keyframesPreludePattern,
+    animationNameDeclarationPattern,
+    animationShorthandDeclarationPattern,
+  ].join("|"),
+  "gim",
+);
+const keyframesNameCapture = 2;
+const animationNameValueCapture = 4;
+const animationShorthandValueCapture = 6;
 
 export function rewriteNormalizedAnimationReferences(
   source: string,
@@ -115,59 +90,107 @@ export function planNormalizedAnimationReferenceRewrites(
   source: string,
   keyframes: Record<string, string>,
 ): PlannedAnimationReferenceRewrite[] {
-  if (!Object.keys(keyframes).length) {
+  if (!hasKeyframeRenames(keyframes)) {
     return [];
   }
 
   const rewrites: PlannedAnimationReferenceRewrite[] = [];
-  for (const pattern of animationRewritePatterns) {
-    collectPatternRewrites(source, pattern, keyframes, rewrites);
-  }
-
-  return rewrites.sort((left, right) => left.start - right.start);
+  collectNormalizedAnimationReferenceRewrites(source, keyframes, rewrites);
+  return rewrites;
 }
 
-function collectPatternRewrites(
+function collectNormalizedAnimationReferenceRewrites(
   source: string,
-  pattern: AnimationRewritePattern,
   keyframes: Record<string, string>,
   rewrites: PlannedAnimationReferenceRewrite[],
 ): void {
-  pattern.regex.lastIndex = 0;
+  normalizedAnimationReferenceRE.lastIndex = 0;
   let match: RegExpExecArray | null;
-  while ((match = pattern.regex.exec(source))) {
-    const valueRange = getNamedGroupRange(match, "value");
-    if (!valueRange) {
+  while ((match = normalizedAnimationReferenceRE.exec(source))) {
+    const rewrite = resolveAnimationReferenceRewrite(match, keyframes);
+    if (!rewrite) {
       continue;
     }
 
-    const rawValue = source.slice(valueRange[0], valueRange[1]);
-    const rewrittenValue = pattern.rewriteValue(rawValue, keyframes);
+    const { kind, rawValue, rewrittenValue } = rewrite;
+    // Each branch puts the rewritten value in the trailing capture, so the
+    // source range can be recovered without the slower regexp indices flag.
+    const valueEnd = match.index + match[0].length;
+    const valueStart = valueEnd - rawValue.length;
     if (rewrittenValue === undefined || rewrittenValue === rawValue) {
       continue;
     }
 
     rewrites.push({
-      start: valueRange[0],
-      end: valueRange[1],
-      kind: pattern.kind,
+      start: valueStart,
+      end: valueEnd,
+      kind,
       rawText: rawValue,
       text: rewrittenValue,
     });
   }
 }
 
+function resolveAnimationReferenceRewrite(
+  match: RegExpExecArray,
+  keyframes: Record<string, string>,
+):
+  | {
+      kind: PlannedAnimationReferenceRewriteKind;
+      rawValue: string;
+      rewrittenValue: string | undefined;
+    }
+  | undefined {
+  if (match[keyframesNameCapture] !== undefined) {
+    const rawValue = match[keyframesNameCapture];
+    return {
+      kind: "keyframes-prelude",
+      rawValue,
+      rewrittenValue: rewriteRawAnimationIdentifier(rawValue, keyframes),
+    };
+  }
+
+  if (match[animationNameValueCapture] !== undefined) {
+    const rawValue = match[animationNameValueCapture];
+    return {
+      kind: "animation-name-declaration",
+      rawValue,
+      rewrittenValue: rewriteNormalizedAnimationDeclarationValue(
+        rawValue,
+        keyframes,
+        rewriteAnimationNameValue,
+      ),
+    };
+  }
+
+  if (match[animationShorthandValueCapture] !== undefined) {
+    const rawValue = match[animationShorthandValueCapture];
+    return {
+      kind: "animation-shorthand-declaration",
+      rawValue,
+      rewrittenValue: rewriteNormalizedAnimationDeclarationValue(
+        rawValue,
+        keyframes,
+        rewriteAnimationShorthandValue,
+      ),
+    };
+  }
+
+  return undefined;
+}
+
 export function applyPlannedAnimationReferenceRewrites(
   source: string,
   rewrites: PlannedAnimationReferenceRewrite[],
 ): string {
-  let code = source;
-  for (let index = rewrites.length - 1; index >= 0; index--) {
-    const rewrite = rewrites[index];
-    code = `${code.slice(0, rewrite.start)}${rewrite.text}${code.slice(rewrite.end)}`;
+  let code = "";
+  let lastEnd = 0;
+  for (const rewrite of rewrites) {
+    code += source.slice(lastEnd, rewrite.start) + rewrite.text;
+    lastEnd = rewrite.end;
   }
 
-  return code;
+  return code + source.slice(lastEnd);
 }
 
 function applyPlannedAnimationReferenceRewritesToMagicString(
@@ -179,12 +202,12 @@ function applyPlannedAnimationReferenceRewritesToMagicString(
   }
 }
 
-function getNamedGroupRange(
-  match: RegExpExecArray,
-  groupName: string,
-): [number, number] | undefined {
-  const groupIndices = match.indices?.groups?.[groupName];
-  return groupIndices ? [groupIndices[0], groupIndices[1]] : undefined;
+function hasKeyframeRenames(keyframes: Record<string, string>): boolean {
+  for (const _name in keyframes) {
+    return true;
+  }
+
+  return false;
 }
 
 function rewriteNormalizedAnimationDeclarationValue(
