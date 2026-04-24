@@ -40,8 +40,8 @@ export default {
 ```
 
 See [packages/compiler/README.md](./packages/compiler/README.md) for the full
-contract, supported options, and intentional drifts from the current
-PostCSS-based Vue compiler.
+contract, supported options, benchmark snapshot, and intentional drifts from
+the current PostCSS-based Vue compiler.
 
 ### `@lightning-vue/utils`
 
@@ -125,6 +125,9 @@ This compare suite is split into parity and non-parity cases. The parity groups
 compare cases that emit the same CSS. The non-parity groups show the cost of
 taking the more-correct path in cases where the older PostCSS path emits
 different CSS.
+
+The current benchmark snapshot is documented in the
+[`@lightning-vue/compiler` README](./packages/compiler/README.md#benchmarks).
 
 - run only the internal Lightning end-to-end benchmarks:
 

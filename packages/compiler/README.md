@@ -78,6 +78,54 @@ Unsupported:
 
 When those option shapes are needed, use `@vue/compiler-sfc`.
 
+## Benchmarks
+
+The compare suite measures `@lightning-vue/compiler` against the current
+PostCSS-based `@vue/compiler-sfc` style compiler on the same scoped CSS input.
+
+Snapshot from `pnpm bench:compare` on April 24, 2026, using a 5-run median.
+Environment: MacBook Air (13-inch, M4, 2025), Apple M4, 10-core CPU
+(4 performance + 6 efficiency), 32 GB memory, macOS 26.4.1, Node v24.15.0,
+pnpm 10.33.0, darwin/arm64.
+
+```bash
+node tools/bench-scoped-selector.mjs --bench bench/compileStyle.compare.bench.ts --runs 5
+```
+
+Times are median wall time per `compileStyle` call. Speedup is based on
+operations per second, so lower time and higher speedup both favor
+`@lightning-vue/compiler`.
+
+### Parity Cases
+
+These cases emit the same CSS after normalization.
+
+| Case                                             | Lightning CSS |   PostCSS | Speedup |
+| ------------------------------------------------ | ------------: | --------: | ------: |
+| Simple selectors                                 |     0.2147 ms | 0.7965 ms |   4.48x |
+| `:deep()` / `:slotted()` / `:global()` selectors |     0.5654 ms | 1.6062 ms |   3.27x |
+| Nested selectors                                 |     0.3445 ms | 1.4948 ms |   4.92x |
+| Animation keyframes                              |     0.2881 ms | 0.7488 ms |   2.93x |
+| Nested at-rules with simple selectors            |     0.2584 ms | 0.5807 ms |   2.43x |
+| Nested at-rules with compound selectors          |     0.3011 ms | 0.7973 ms |   3.06x |
+| Nested at-rules with descendant selectors        |     0.2998 ms | 0.6953 ms |   2.52x |
+| Nested at-rules with realistic selectors         |     0.3792 ms | 1.1415 ms |   3.42x |
+| Mixed nested selectors and at-rules              |     0.4289 ms | 1.8702 ms |   4.94x |
+
+### Correctness-Sensitive Cases
+
+These cases exercise documented drift examples. They measure throughput on the
+same input while the two compilers preserve different selector semantics.
+
+| Case                                                    | Lightning CSS |   PostCSS | Speedup |
+| ------------------------------------------------------- | ------------: | --------: | ------: |
+| Selectors that wrap `:deep()`                           |     0.3784 ms | 0.9187 ms |   2.81x |
+| Mixed realistic styles                                  |     0.6985 ms | 1.7445 ms |   2.74x |
+| Nested at-rules with `:slotted()` and wrapped `:deep()` |     0.4925 ms | 1.0328 ms |   2.38x |
+
+The Node build is benchmarked here; the browser/WASM build may have different
+performance characteristics and is not covered by this snapshot.
+
 ## Intentional Drifts
 
 This package currently has a small set of intentional semantic drifts from the
