@@ -443,9 +443,7 @@ function printLightningCssHeadroomSummary(benchmarks) {
 
   console.log("");
   console.log("Compiler headroom:");
-  console.log(
-    `  ${muted("Main metric")}`,
-  );
+  console.log(`  ${muted("Main metric")}`);
   console.log(
     `    compiler JS overhead = (full compiler time - handoff transform time) / full compiler time`,
   );
@@ -453,34 +451,20 @@ function printLightningCssHeadroomSummary(benchmarks) {
     `    Includes analysis, source rewrites, selector handling, planning, decoding, and finalization.`,
   );
   console.log("");
-  console.log(
-    `  ${muted("CSS inputs")}`,
-  );
-  console.log(
-    "    authored  Original benchmark CSS.",
-  );
+  console.log(`  ${muted("CSS inputs")}`);
+  console.log("    authored  Original benchmark CSS.");
   console.log(
     "    handoff   CSS passed to Lightning CSS after v-bind rewrites, nested normalization,",
   );
-  console.log(
-    "              source scoping, and transform planning.",
-  );
-  console.log(
-    "              Preparation may remove Vue selector carriers or lower nesting before",
-  );
-  console.log(
-    "              Lightning CSS parses the source, so handoff throughput can differ.",
-  );
+  console.log("              source scoping, and transform planning.");
+  console.log("              Preparation may remove Vue selector carriers or lower nesting before");
+  console.log("              Lightning CSS parses the source, so handoff throughput can differ.");
   console.log("");
-  console.log(
-    `  ${muted("Secondary reference")}`,
-  );
+  console.log(`  ${muted("Secondary reference")}`);
   console.log(
     "    forced selector hook = authored CSS transformed with an empty selector callback.",
   );
-  console.log(
-    "                           Estimates selector-hook cost for visitor-based routes.",
-  );
+  console.log("                           Estimates selector-hook cost for visitor-based routes.");
   for (const [category, rows] of headroomGroups) {
     console.log("");
     console.log(`- ${category}`);
@@ -506,9 +490,7 @@ function printLightningCssHeadroomSummary(benchmarks) {
       );
       console.log("");
       console.log(`    ${muted("throughput")}`);
-      console.log(
-        `           ${metric(formatHertz(row.benchmark.hz), color.cyan)}  full compiler`,
-      );
+      console.log(`           ${metric(formatHertz(row.benchmark.hz), color.cyan)}  full compiler`);
       console.log(
         `           ${metric(formatHertz(row.preparedTransform.hz), color.green)}  handoff transform`,
       );
