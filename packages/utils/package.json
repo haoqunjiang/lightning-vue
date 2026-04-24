@@ -1,6 +1,6 @@
 {
   "name": "@lightning-vue/utils",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Lightning CSS-compatible selector and CSS source utilities for Vue tooling",
   "keywords": [
     "css",
