@@ -25,6 +25,10 @@ export interface RewriteCssVarsInStyleSourceResult {
 }
 
 export function hasCssVarsBinding(source: string): boolean {
+  if (!source.includes("v-bind")) {
+    return false;
+  }
+
   return /v-bind\s*\(/.test(maskCssVarComments(source));
 }
 

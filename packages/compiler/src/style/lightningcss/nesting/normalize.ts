@@ -144,14 +144,14 @@ function collectPreparedLocalScopeRewrites(
 
   const preludeRewrite =
     block.blockKind === "style" && !instructions.disableCurrentRuleInjection
-      ? (scopeSelectorPrelude(block.normalizedPrelude, id) ?? null)
+      ? scopePreparedLocalPrelude(block.normalizedPrelude, id)
       : null;
   if (block.blockKind === "style" && !instructions.disableCurrentRuleInjection && !preludeRewrite) {
     return false;
   }
 
   const declarationWrapperPreludeRewrite = instructions.declarationWrapperPrelude
-    ? (scopeSelectorPrelude(instructions.declarationWrapperPrelude, id) ?? null)
+    ? scopePreparedLocalPrelude(instructions.declarationWrapperPrelude, id)
     : null;
   if (instructions.declarationWrapperPrelude && !declarationWrapperPreludeRewrite) {
     return false;
@@ -178,6 +178,14 @@ function collectPreparedLocalScopeRewrites(
   }
 
   return true;
+}
+
+function scopePreparedLocalPrelude(prelude: string, id: string): string | null {
+  if (prelude === "&") {
+    return `&[${id}]`;
+  }
+
+  return scopeSelectorPrelude(prelude, id) ?? null;
 }
 
 function applyPreparedLocalScopeRewrites(

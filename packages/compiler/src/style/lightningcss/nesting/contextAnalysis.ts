@@ -47,6 +47,10 @@ export function analyzeSelectorNestingContext(prelude: string): NestedScopeAnaly
 }
 
 function mayContainNestedScopeCarrier(prelude: string): boolean {
+  if (!prelude.includes(":")) {
+    return false;
+  }
+
   return (
     prelude.includes(":deep(") || prelude.includes(":slotted(") || prelude.includes(":global(")
   );

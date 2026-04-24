@@ -120,7 +120,7 @@ export function createAtRuleNormalizationInstructions(
 }
 
 function shouldUseNoInjectDeclarationWrapper(prelude: string, inheritsContext: boolean): boolean {
-  return inheritsContext || preludeIsPureGlobalCarrier(prelude);
+  return inheritsContext || (prelude.includes(":global(") && preludeIsPureGlobalCarrier(prelude));
 }
 
 function createChildNormalizationInstructions(
