@@ -1,4 +1,10 @@
 import type { CssBlockNode } from "./blockTree";
+import { isWhitespace } from "../selectors/shared";
+
+export interface CssTextRange {
+  end: number;
+  start: number;
+}
 
 export function forEachTopLevelTextRange(
   block: CssBlockNode,
@@ -34,25 +40,45 @@ export function findTrimmedSourceRange(
   source: string,
   absoluteStart: number,
 ): { end: number; start: number; text: string } | null {
-  const leadingMatch = source.match(/^\s*/);
-  const trailingMatch = source.match(/\s*$/);
-  const leadingLength = leadingMatch ? leadingMatch[0].length : 0;
-  const trailingLength = trailingMatch ? trailingMatch[0].length : 0;
-  const trimmedText = source.slice(leadingLength, source.length - trailingLength);
-  if (!trimmedText) {
+  const range = findTrimmedCssRange(source, absoluteStart);
+  if (!range) {
     return null;
   }
 
   return {
-    end: absoluteStart + source.length - trailingLength,
-    start: absoluteStart + leadingLength,
-    text: trimmedText,
+    ...range,
+    text: source.slice(range.start - absoluteStart, range.end - absoluteStart),
+  };
+}
+
+export function findTrimmedCssRange(
+  source: string,
+  absoluteStart: number = 0,
+): CssTextRange | null {
+  let start = 0;
+  let end = source.length;
+
+  while (start < end && isWhitespace(source[start])) {
+    start++;
+  }
+
+  while (end > start && isWhitespace(source[end - 1])) {
+    end--;
+  }
+
+  if (start === end) {
+    return null;
+  }
+
+  return {
+    end: absoluteStart + end,
+    start: absoluteStart + start,
   };
 }
 
 export function findLastNonWhitespaceIndex(source: string): number {
   for (let index = source.length - 1; index >= 0; index--) {
-    if (!/\s/.test(source[index])) {
+    if (!isWhitespace(source[index])) {
       return index;
     }
   }

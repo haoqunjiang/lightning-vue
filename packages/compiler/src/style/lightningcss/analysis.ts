@@ -1,5 +1,6 @@
 import { analyzeCssNestingStructure, type CssNestingStructureSummary } from "@lightning-vue/utils";
 import { hasCssVarsBinding } from "../cssVars";
+import { getShortScopeId } from "../scopeId";
 import { registerScopedKeyframeRename } from "./keyframeNames";
 
 export type LightningCssNestedStructure = CssNestingStructureSummary;
@@ -54,7 +55,7 @@ export function deriveAnalysisAfterNestedNormalization(
 }
 
 export function analyzeLightningCssStyle(source: string, id: string): LightningCssStyleAnalysis {
-  const shortId = id.replace(/^data-v-/, "");
+  const shortId = getShortScopeId(id);
   const analysis: LightningCssStyleAnalysis = {
     hasAnimationDeclarations: /animation/i.test(source),
     nested: {

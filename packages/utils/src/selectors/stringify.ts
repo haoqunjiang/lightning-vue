@@ -124,7 +124,49 @@ function stringifyAttributeValue(value: string): string {
 }
 
 function canStringifyUnquotedAttributeValue(value: string): boolean {
-  return /^-?[_a-zA-Z][_a-zA-Z0-9-]*$/.test(value);
+  let index = 0;
+  if (value.charCodeAt(0) === asciiDash) {
+    index = 1;
+  }
+
+  if (!isAsciiIdentifierStart(value.charCodeAt(index))) {
+    return false;
+  }
+
+  for (index++; index < value.length; index++) {
+    if (!isAsciiIdentifierContinue(value.charCodeAt(index))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const asciiZero = "0".charCodeAt(0);
+const asciiNine = "9".charCodeAt(0);
+const asciiUpperA = "A".charCodeAt(0);
+const asciiUpperZ = "Z".charCodeAt(0);
+const asciiDash = "-".charCodeAt(0);
+const asciiUnderscore = "_".charCodeAt(0);
+const asciiLowerA = "a".charCodeAt(0);
+const asciiLowerZ = "z".charCodeAt(0);
+
+function isAsciiIdentifierStart(code: number): boolean {
+  return (
+    (code >= asciiUpperA && code <= asciiUpperZ) ||
+    (code >= asciiLowerA && code <= asciiLowerZ) ||
+    code === asciiUnderscore
+  );
+}
+
+function isAsciiIdentifierContinue(code: number): boolean {
+  return (
+    (code >= asciiZero && code <= asciiNine) ||
+    (code >= asciiUpperA && code <= asciiUpperZ) ||
+    (code >= asciiLowerA && code <= asciiLowerZ) ||
+    code === asciiUnderscore ||
+    code === asciiDash
+  );
 }
 
 function stringifyAttrOperator(operator: AttrOperation["operator"]): string {

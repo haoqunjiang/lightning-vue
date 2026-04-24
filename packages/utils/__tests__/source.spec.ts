@@ -2,6 +2,7 @@ import type { Selector } from "lightningcss";
 import type { CssBlockPrelude } from "../src/source";
 import {
   analyzeCssNestingStructure,
+  findTrimmedCssRange,
   findTrimmedSourceRange,
   forEachTopLevelTextRange,
   hasMeaningfulCssText,
@@ -220,6 +221,10 @@ describe("source-facing API", () => {
   });
 
   test("findTrimmedSourceRange trims surrounding whitespace only", () => {
+    expect(findTrimmedCssRange("  .foo  ", 10)).toEqual({
+      start: 12,
+      end: 16,
+    });
     expect(findTrimmedSourceRange("  .foo  ", 10)).toEqual({
       start: 12,
       end: 16,

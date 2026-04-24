@@ -9,6 +9,7 @@ export {
 export {
   analyzeCssNestingStructure,
   findLastNonWhitespaceIndex,
+  findTrimmedCssRange,
   findTrimmedSourceRange,
   walkCssBlockPreludes,
   forEachTopLevelTextRange,
@@ -21,6 +22,7 @@ export {
   type CssBlockKind,
   type CssBlockPrelude,
   type CssBlockNode,
+  type CssTextRange,
   type CssNestingStructureSummary,
   type CssSourceMapMerge,
   type CssSelectorSourceRewriteOptions,

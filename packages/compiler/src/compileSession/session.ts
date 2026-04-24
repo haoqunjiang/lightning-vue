@@ -1,4 +1,5 @@
 import type { RawSourceMap } from "@vue/compiler-core";
+import { getShortScopeId } from "../style/scopeId";
 import { analyzeLightningCssStyle, deriveSourceScopeMode } from "../style/lightningcss/analysis";
 import type { CompileContext, CompileOptions, CompileSession, CompileState } from "./types";
 
@@ -24,7 +25,7 @@ export function createCompileContext(
       overrides?.modulesOptions ??
       ("modulesOptions" in options ? options.modulesOptions || {} : {}),
     scoped: options.scoped ?? false,
-    shortId: options.id.replace(/^data-v-/, ""),
+    shortId: getShortScopeId(options.id),
     sourceMap:
       overrides?.sourceMap ??
       shouldGenerateLightningCssSourceMap(

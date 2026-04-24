@@ -6,6 +6,7 @@ import type {
   ScopedSelectorHelpers,
   ScopedStyleTransformContext,
 } from "./types";
+import { getShortScopeId } from "../../scopeId";
 
 interface ScopedSelectorOptions {
   id: string;
@@ -17,7 +18,7 @@ const noInjectMarkerName = "__VUE_SCOPE_NO_INJECT__";
 export function createScopedStyleTransformContext(
   options: ScopedSelectorOptions,
 ): ScopedStyleTransformContext {
-  const shortId = options.id.replace(/^data-v-/, "");
+  const shortId = getShortScopeId(options.id);
   const scopeId = `data-v-${shortId}`;
 
   return {

@@ -154,8 +154,12 @@ The source-facing exports are:
 - `rewriteCssSelectorSource(source, options)`
 - `parseCssBlockTree(source)`
 - `scopeSelectorPrelude(prelude, id)`
+- `findTrimmedCssRange(source, absoluteStart?)`
+- `findTrimmedSourceRange(source, absoluteStart)`
+- `findLastNonWhitespaceIndex(source)`
 - `CssBlockPrelude`
 - `CssBlockKind`
+- `CssTextRange`
 - `CssSelectorSourceRewriteOptions`
 - `CssBlockNode`
 

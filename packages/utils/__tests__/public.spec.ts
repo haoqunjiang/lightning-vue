@@ -28,6 +28,7 @@ describe("public root entrypoint", () => {
     expect(utils.forEachTopLevelTextRange).toBe(source.forEachTopLevelTextRange);
     expect(utils.someTopLevelTextRange).toBe(source.someTopLevelTextRange);
     expect(utils.findLastNonWhitespaceIndex).toBe(source.findLastNonWhitespaceIndex);
+    expect(utils.findTrimmedCssRange).toBe(source.findTrimmedCssRange);
     expect(utils.findTrimmedSourceRange).toBe(source.findTrimmedSourceRange);
     expect(utils.hasMeaningfulCssText).toBe(source.hasMeaningfulCssText);
   });
@@ -82,6 +83,7 @@ describe("public root entrypoint", () => {
 
     expect(preludes).toEqual([".foo", "@media (min-width: 1px)", ".bar"]);
     expect(utils.findLastNonWhitespaceIndex("  .foo \n")).toBe(5);
+    expect(utils.findTrimmedCssRange("  .foo \n")).toEqual({ start: 2, end: 6 });
     expect(utils.analyzeCssNestingStructure(sourceCode)).toEqual({
       hasNestedSelectorChildren: false,
       hasNestedAtRuleChildren: true,

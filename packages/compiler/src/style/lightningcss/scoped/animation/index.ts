@@ -1,3 +1,4 @@
+import { findTrimmedCssRange } from "@lightning-vue/utils";
 import type { RawSourceMap } from "@vue/compiler-core";
 import MagicString from "magic-string";
 import merge from "merge-source-map";
@@ -191,11 +192,14 @@ function rewriteNormalizedAnimationDeclarationValue(
   keyframes: Record<string, string>,
   rewriteValue: (value: string, keyframes: Record<string, string>) => string,
 ): string | undefined {
-  const leadingMatch = rawValue.match(/^\s*/);
-  const trailingMatch = rawValue.match(/\s*$/);
-  const leading = leadingMatch ? leadingMatch[0] : "";
-  const trailing = trailingMatch ? trailingMatch[0] : "";
-  const trimmedValue = rawValue.trim();
+  const trimmedRange = findTrimmedCssRange(rawValue);
+  if (!trimmedRange) {
+    return undefined;
+  }
+
+  const leading = rawValue.slice(0, trimmedRange.start);
+  const trailing = rawValue.slice(trimmedRange.end);
+  const trimmedValue = rawValue.slice(trimmedRange.start, trimmedRange.end);
   if (!trimmedValue) {
     return undefined;
   }

@@ -101,7 +101,7 @@ export function splitTopLevelWhitespace(source: string): string[] {
       continue;
     }
 
-    if (!parenDepth && !bracketDepth && /\s/.test(current)) {
+    if (!parenDepth && !bracketDepth && isCssWhitespace(current)) {
       if (tokenStart !== -1) {
         result.push(source.slice(tokenStart, index));
         tokenStart = -1;
@@ -119,4 +119,8 @@ export function splitTopLevelWhitespace(source: string): string[] {
   }
 
   return result;
+}
+
+function isCssWhitespace(char: string | undefined): boolean {
+  return char === " " || char === "\n" || char === "\r" || char === "\t" || char === "\f";
 }

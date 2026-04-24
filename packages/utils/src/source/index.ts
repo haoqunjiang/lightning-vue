@@ -6,10 +6,12 @@ export type { CssNestingStructureSummary } from "./structure";
 export { analyzeCssNestingStructure } from "./structure";
 export {
   findLastNonWhitespaceIndex,
+  findTrimmedCssRange,
   findTrimmedSourceRange,
   forEachTopLevelTextRange,
   hasMeaningfulCssText,
   someTopLevelTextRange,
+  type CssTextRange,
 } from "./segments";
 export type {
   CssSourceMapMerge,
