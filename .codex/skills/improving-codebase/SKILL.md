@@ -36,6 +36,11 @@ or architecture cleanup anywhere in this repo.
 
 Before performance work:
 
+- orient with the current headroom-style benchmark surface when the compiler
+  pipeline is in scope
+- compare the raw upstream engine, a minimal hook/no-op path, and the full
+  compiler pipeline on the same corpus when the harness supports it; this
+  separates integration overhead from compiler-owned logic
 - save a comparison baseline for the target area
 - do not overwrite it casually in the same optimization session
 - if the target area lacks a focused harness or benchmark, add one
@@ -74,9 +79,32 @@ strings, trace titles, or benchmark labels:
 ## How To Read The Benchmarks
 
 - Prefer repeated median comparisons over a single run.
+- Start with a headroom-style view to find which compiler-owned paths still
+  have room to improve before drilling into focused microbenches.
 - Prefer end-to-end metrics over microbench wins.
 - Use microbenches to locate cost, not to declare success.
 - If the results are mixed, keep digging until you can explain the tradeoff.
+- Treat speedup over PostCSS as product evidence, not as the optimization
+  ceiling. For compiler tuning, compare full compiler throughput against the
+  raw Lightning CSS and no-op visitor rows.
+
+## Hot-Path Scans
+
+Source scanning is part of the compiler hot path. Before adding or changing a
+full-source regular expression:
+
+- check whether an existing structural source walk already sees the needed
+  facts
+- avoid repeated full-source regexp passes when one source walk can collect the
+  same data
+- remember that regexp is often easier to read and can be fast because the
+  engine is native; that is a possibility to measure, not a fact to assume
+- for sophisticated enough matching, microbenchmark the regexp against a
+  straightforward handwritten scanner
+- choose the regexp when it wins, or when its measured loss is small enough to
+  justify the readability gain
+- keep scanner contracts explicit and covered by focused tests, since scanner
+  shortcuts can bypass parser-level validation
 
 ## Explainability Loop
 
