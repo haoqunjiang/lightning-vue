@@ -13,10 +13,6 @@ export function normalizeBlockPrelude(prelude: string): string {
   return stripCssComments(prelude).trim();
 }
 
-export function isCustomPropertyDeclarationPrelude(prelude: string): boolean {
-  return normalizeBlockPrelude(prelude).startsWith("--");
-}
-
 function stripCssComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, " ");
 }

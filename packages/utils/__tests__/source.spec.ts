@@ -270,6 +270,31 @@ describe("source-facing API", () => {
     expect(roots[0].children[0].normalizedPrelude).toBe(".bar");
   });
 
+  test("source walkers preserve commented custom properties and conditional colons", () => {
+    const source = `
+.foo {
+  /* before */ --theme: { color: red; };
+  @media (min-width: 1px) {
+    color: blue;
+  }
+}
+`;
+
+    const preludes: CssBlockPrelude[] = [];
+    walkCssBlockPreludes(source, (prelude) => {
+      preludes.push(prelude);
+    });
+    expect(preludes.map((prelude) => prelude.normalizedPrelude)).toEqual([
+      ".foo",
+      "@media (min-width: 1px)",
+    ]);
+
+    const roots = parseCssBlockTree(source);
+    expect(roots[0].children.map((child) => child.normalizedPrelude)).toEqual([
+      "@media (min-width: 1px)",
+    ]);
+  });
+
   test("scopeSelectorPrelude rewrites simple selectors and recurses into containers", () => {
     expect(scopeSelectorPrelude(".foo, .bar", "data-test")).toBe(
       ".foo[data-test], .bar[data-test]",

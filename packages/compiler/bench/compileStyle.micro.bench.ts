@@ -44,6 +44,7 @@ const deepSlottedGlobalSelectorAnalysis = analyzeLightningCssStyle(
   "data-v-bench",
 );
 const mixedRealisticAnalysis = analyzeLightningCssStyle(mixedRealisticScopedSource, "data-v-bench");
+const nestedAtRuleAnalysis = analyzeLightningCssStyle(nestedAtRuleScopedSource, "data-v-bench");
 const nestedSelectorAnalysis = analyzeLightningCssStyle(nestedSelectorScopedSource, "data-v-bench");
 const nestedMixedAnalysis = analyzeLightningCssStyle(nestedMixedScopedSource, "data-v-bench");
 const normalizedNestedSelectorAnalysis = analyzeLightningCssStyle(
@@ -295,6 +296,18 @@ describe("lightningcss micro: nested selector normalization", () => {
 });
 
 describe("lightningcss micro: nested at-rule normalization", () => {
+  bench("analyze style nested at-rules", () => {
+    analyzeLightningCssStyle(nestedAtRuleScopedSource, "data-v-bench");
+  });
+
+  bench("scope source nested at-rules", () => {
+    scopeLightningCssSource(
+      nestedAtRuleScopedSource,
+      "data-v-bench",
+      deriveSourceScopeMode(nestedAtRuleAnalysis),
+    );
+  });
+
   bench("scope source normalized nested at-rules", () => {
     scopeLightningCssSource(
       normalizedNestedAtRuleSource,

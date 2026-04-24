@@ -55,7 +55,6 @@ export function deriveAnalysisAfterNestedNormalization(
 
 export function analyzeLightningCssStyle(source: string, id: string): LightningCssStyleAnalysis {
   const shortId = id.replace(/^data-v-/, "");
-  const mayContainKeyframesPrelude = /@(?:-\w+-)?keyframes\b/i.test(source);
   const analysis: LightningCssStyleAnalysis = {
     hasAnimationDeclarations: /animation/i.test(source),
     nested: {
@@ -70,16 +69,11 @@ export function analyzeLightningCssStyle(source: string, id: string): LightningC
     keyframes: Object.create(null),
   };
 
-  analysis.nested = analyzeCssNestingStructure(
-    source,
-    mayContainKeyframesPrelude
-      ? (prelude) => {
-          if (prelude.blockKind === "keyframes") {
-            registerScopedKeyframeRename(prelude.normalizedPrelude, shortId, analysis.keyframes);
-          }
-        }
-      : undefined,
-  );
+  analysis.nested = analyzeCssNestingStructure(source, (prelude) => {
+    if (prelude.blockKind === "keyframes") {
+      registerScopedKeyframeRename(prelude.normalizedPrelude, shortId, analysis.keyframes);
+    }
+  });
 
   return analysis;
 }

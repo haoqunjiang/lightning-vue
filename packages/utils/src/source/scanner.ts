@@ -1,9 +1,5 @@
 import type { CssBlockKind } from "./shared";
-import {
-  getCssBlockKind,
-  isCustomPropertyDeclarationPrelude,
-  normalizeBlockPrelude,
-} from "./shared";
+import { getCssBlockKind, normalizeBlockPrelude } from "./shared";
 
 export interface CssBlockScanPrelude {
   blockKind: CssBlockKind;
@@ -91,16 +87,16 @@ export function scanCssBlocks(source: string, options: CssBlockScanOptions): voi
       continue;
     }
 
-    if (
-      current === ":" &&
-      !customPropertyValue &&
-      isCustomPropertyDeclarationPrelude(source.slice(segmentStart, index))
-    ) {
-      customPropertyValue = true;
+    if (parenDepth || bracketDepth) {
       continue;
     }
 
-    if (parenDepth || bracketDepth) {
+    if (
+      current === ":" &&
+      !customPropertyValue &&
+      startsWithCustomPropertyName(source, segmentStart)
+    ) {
+      customPropertyValue = true;
       continue;
     }
 
@@ -160,4 +156,35 @@ export function scanCssBlocks(source: string, options: CssBlockScanOptions): voi
       resetSegmentState(index + 1);
     }
   }
+}
+
+function startsWithCustomPropertyName(source: string, segmentStart: number): boolean {
+  let index = segmentStart;
+
+  while (index < source.length) {
+    const current = source[index];
+    if (
+      current === " " ||
+      current === "\n" ||
+      current === "\r" ||
+      current === "\t" ||
+      current === "\f"
+    ) {
+      index++;
+      continue;
+    }
+
+    if (current === "/" && source[index + 1] === "*") {
+      const commentEnd = source.indexOf("*/", index + 2);
+      if (commentEnd === -1) {
+        return false;
+      }
+      index = commentEnd + 2;
+      continue;
+    }
+
+    return current === "-" && source[index + 1] === "-";
+  }
+
+  return false;
 }
