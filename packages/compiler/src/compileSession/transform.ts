@@ -21,13 +21,21 @@ export function createTransformPlan(session: CompileSession): TransformPlan {
     };
   }
 
+  if (state.sourceScopeMode === "prepared-local") {
+    return {
+      ...basePlan,
+      code: state.source,
+      selectorsScopedInSource,
+    };
+  }
+
   try {
     if (context.sourceMap) {
       const scopedResult = scopeLightningCssSourceWithMap(
         state.source,
         context.filename,
         context.id,
-        state.analysis.hasScopedSelectorSpecials,
+        state.sourceScopeMode,
         state.inputMap,
       );
       state.inputMap = scopedResult.map;
@@ -41,11 +49,7 @@ export function createTransformPlan(session: CompileSession): TransformPlan {
 
     return {
       ...basePlan,
-      code: scopeLightningCssSource(
-        state.source,
-        context.id,
-        state.analysis.hasScopedSelectorSpecials,
-      ),
+      code: scopeLightningCssSource(state.source, context.id, state.sourceScopeMode),
       selectorsScopedInSource,
     };
   } catch {

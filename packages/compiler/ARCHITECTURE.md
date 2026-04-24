@@ -204,11 +204,20 @@ So the normalizer:
 - applies those instructions source-to-source in
   [nesting/normalize.ts](./src/style/lightningcss/nesting/normalize.ts)
 
-Those plans cover four decisions:
+Those instructions answer four questions:
 
 - whether declarations need an explicit `& { ... }` wrapper
-- whether the current rule becomes context-only
+- whether the current rule should stop carrying declarations and only define
+  the outer nesting boundary, with those declarations moved into `& { ... }`
 - which context child style rules and child at-rules inherit
+- whether the same pass can already emit source whose local selectors carry
+  the scope attribute, such as `&[data-v-xxx]` and `.bar[data-v-xxx]`, so the
+  later generic source-scoping walk can skip that tree
+
+For most nested styles, `normalize.ts` just applies those instructions. On
+plain local nested trees, it also derives a smaller rewrite plan from them so
+that the same pass can emit source whose local selectors already carry the
+scope attribute.
 
 This stage stays source-based because it benchmarks better than the AST-heavy
 alternative for carrier-heavy nested styles.
@@ -447,11 +456,16 @@ That path is used when:
 - CSS Modules are not enabled
 - the source rewrite succeeds
 
-It has two subpaths:
+It has three routes:
 
-- **direct prelude rewrite**
-  when analysis says there are no Vue carriers, `scopeSelectorPrelude(...)` from
-  `@lightning-vue/utils` can inject `[data-v-xxx]` very cheaply
+- **simple source rewrite**
+  when analysis says there are no Vue carriers and no nested preparation is
+  needed, `scopeSelectorPrelude(...)` from `@lightning-vue/utils` can inject
+  `[data-v-xxx]` very cheaply
+- **`prepared-local` source route**
+  on plain local nested trees, when nested normalization can finish that
+  selector scoping work itself, the next stage receives source whose local
+  selectors already carry the scope attribute
 - **parsed source rewrite**
   when carriers are present, selectors are parsed and the full scoped rewrite
   pipeline runs
@@ -588,7 +602,7 @@ Source-based nested normalization:
 - `instructions.ts`
   block-local normalization instructions
 - `normalize.ts`
-  source rewrite that applies those plans
+  source rewrite that applies those instructions
 
 ### `src/style/lightningcss/scoped/`
 

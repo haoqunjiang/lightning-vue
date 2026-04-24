@@ -13,6 +13,7 @@ context:
 initial:
   - initial.source=".foo-bar { color: red; }"
   - initial.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - initial.sourceScopeMode=simple
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
@@ -21,6 +22,7 @@ prepared:
   - prepared=true
   - prepared.source=".foo-bar { color: red; }"
   - prepared.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - prepared.sourceScopeMode=simple
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0
@@ -60,6 +62,7 @@ context:
 initial:
   - initial.source=".card {\\n  color: v-bind(themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
   - initial.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:true keyframes:1
+  - initial.sourceScopeMode=simple
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
@@ -68,6 +71,7 @@ prepared:
   - prepared=true
   - prepared.source=".card {\\n  color: var(--trace-themeColor);\\n  animation: fade 1s;\\n}\\n@keyframes fade {\\n  from { opacity: 0; }\\n  to { opacity: 1; }\\n}"
   - prepared.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:true keyframes:1
+  - prepared.sourceScopeMode=simple
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0
@@ -81,6 +85,55 @@ transform:
 
 final:
   - code=".card[data-v-trace] {\\n  color: var(--trace-themeColor);\\n  animation: 1s fade-trace;\\n}\\n\\n@keyframes fade-trace {\\n  from {\\n    opacity: 0;\\n  }\\n\\n  to {\\n    opacity: 1;\\n  }\\n}\\n"
+  - map=false
+  - errors=0
+  - dependencies=0
+  - modules=undefined"
+`;
+
+exports[`'mixed nested scoped source preparation' 1`] = `
+"source: .card {
+  color: red;
+  .title { color: blue; }
+  @media (min-width: 600px) {
+    color: green;
+    .meta { color: black; }
+  }
+}
+
+context:
+  - filename=trace.css
+  - scoped=true
+  - modules=false
+  - sourceMap=false
+  - isProd=false
+
+initial:
+  - initial.source=".card {\\n  color: red;\\n  .title { color: blue; }\\n  @media (min-width: 600px) {\\n    color: green;\\n    .meta { color: black; }\\n  }\\n}"
+  - initial.analysis=nested:selectorChildren=true,atRuleChildren=true,selectorsInAtRules=true,mixedChildren=true specials:false animations:false keyframes:0
+  - initial.sourceScopeMode=simple
+  - initial.inputMap=false
+  - initial.errors=0
+  - initial.dependencies=0
+
+prepared:
+  - prepared=true
+  - prepared.source=".card {\\n  &[data-v-trace] {color: red;}\\n  .title[data-v-trace] { color: blue; }\\n  @media (min-width: 600px) {\\n    &[data-v-trace] {color: green;}\\n    .meta[data-v-trace] { color: black; }\\n  }\\n}"
+  - prepared.analysis=nested:selectorChildren=true,atRuleChildren=true,selectorsInAtRules=true,mixedChildren=true specials:false animations:false keyframes:0
+  - prepared.sourceScopeMode=prepared-local
+  - prepared.inputMap=false
+  - prepared.errors=0
+  - prepared.dependencies=0
+
+transform:
+  - code=".card {\\n  &[data-v-trace] {color: red;}\\n  .title[data-v-trace] { color: blue; }\\n  @media (min-width: 600px) {\\n    &[data-v-trace] {color: green;}\\n    .meta[data-v-trace] { color: black; }\\n  }\\n}"
+  - selectorsScopedInSource=true
+  - includeNesting=true
+  - inputSourceMap=false
+  - cssModules=undefined
+
+final:
+  - code=".card[data-v-trace] {\\n  color: red;\\n}\\n\\n.card .title[data-v-trace] {\\n  color: #00f;\\n}\\n\\n@media (width >= 600px) {\\n  .card[data-v-trace] {\\n    color: green;\\n  }\\n\\n  .card .meta[data-v-trace] {\\n    color: #000;\\n  }\\n}\\n"
   - map=false
   - errors=0
   - dependencies=0
@@ -103,20 +156,22 @@ context:
 initial:
   - initial.source=".card {\\n  color: red;\\n  .title { color: blue; }\\n}"
   - initial.analysis=nested:selectorChildren=true,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - initial.sourceScopeMode=simple
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
 
 prepared:
   - prepared=true
-  - prepared.source=":global(.card) {\\n  & {color: red;}\\n  .title { color: blue; }\\n}"
-  - prepared.analysis=nested:selectorChildren=true,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:true animations:false keyframes:0
+  - prepared.source=".card {\\n  &[data-v-trace] {color: red;}\\n  .title[data-v-trace] { color: blue; }\\n}"
+  - prepared.analysis=nested:selectorChildren=true,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - prepared.sourceScopeMode=prepared-local
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0
 
 transform:
-  - code=".card{&[data-v-trace]{color: red;}.title[data-v-trace]{ color: blue; }\\n}"
+  - code=".card {\\n  &[data-v-trace] {color: red;}\\n  .title[data-v-trace] { color: blue; }\\n}"
   - selectorsScopedInSource=true
   - includeNesting=true
   - inputSourceMap=false
@@ -148,6 +203,7 @@ context:
 initial:
   - initial.source=".card {\\n  color: red;\\n  @media (min-width: 600px) {\\n    color: blue;\\n  }\\n}"
   - initial.analysis=nested:selectorChildren=false,atRuleChildren=true,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - initial.sourceScopeMode=simple
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
@@ -156,6 +212,7 @@ prepared:
   - prepared=true
   - prepared.source=".card {\\n  color: red;\\n  @media (min-width: 600px) {\\n    color: blue;\\n  }\\n}"
   - prepared.analysis=nested:selectorChildren=false,atRuleChildren=true,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - prepared.sourceScopeMode=simple
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0
@@ -188,6 +245,7 @@ context:
 initial:
   - initial.source=".card .title { color: red; }"
   - initial.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - initial.sourceScopeMode=simple
   - initial.inputMap=false
   - initial.errors=0
   - initial.dependencies=0
@@ -196,6 +254,7 @@ prepared:
   - prepared=true
   - prepared.source=".card .title { color: red; }"
   - prepared.analysis=nested:selectorChildren=false,atRuleChildren=false,selectorsInAtRules=false,mixedChildren=false specials:false animations:false keyframes:0
+  - prepared.sourceScopeMode=simple
   - prepared.inputMap=false
   - prepared.errors=0
   - prepared.dependencies=0

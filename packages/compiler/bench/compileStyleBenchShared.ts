@@ -4,7 +4,12 @@ import {
   compileStyle as _compileStyleWithLightningCss,
   createLightningCssStyleVisitor,
 } from "../src";
-import { analyzeLightningCssStyle, hasNestedStructure } from "../src/style/lightningcss/analysis";
+import {
+  analyzeLightningCssStyle,
+  canPrepareLocalNestedSource,
+  deriveNormalizedSourceScopeMode,
+  hasNestedStructure,
+} from "../src/style/lightningcss/analysis";
 import { normalizeNestedStyleBlocks } from "../src/style/lightningcss/nesting/normalize";
 import { scopeLightningCssSource } from "../src/style/lightningcss/scoped/source";
 
@@ -180,15 +185,26 @@ export function transformWithLightningCss(
 }
 
 export function compileWithLightningCssUsingNormalizedNestedScoping(source: string) {
-  const normalizedSource = normalizeNestedStyleBlocks(source, "bench.css").code;
-  const analysis = analyzeLightningCssStyle(normalizedSource, "data-v-bench");
-  const scopedSource = scopeLightningCssSource(
-    normalizedSource,
-    "data-v-bench",
-    analysis.hasScopedSelectorSpecials,
-  );
+  const originalAnalysis = analyzeLightningCssStyle(source, "data-v-bench");
+  const normalizedResult = normalizeNestedStyleBlocks(source, "bench.css", undefined, false, {
+    preparedLocalScopeId: canPrepareLocalNestedSource(originalAnalysis)
+      ? "data-v-bench"
+      : undefined,
+  });
+  const analysis = analyzeLightningCssStyle(normalizedResult.code, "data-v-bench");
+  const preparedSource = normalizedResult.preparedLocalSource
+    ? normalizedResult.code
+    : scopeLightningCssSource(
+        normalizedResult.code,
+        "data-v-bench",
+        deriveNormalizedSourceScopeMode(
+          originalAnalysis,
+          analysis,
+          normalizedResult.introducedScopedSelectorSpecials,
+        ),
+      );
 
-  return transformWithLightningCss(scopedSource, {
+  return transformWithLightningCss(preparedSource, {
     include: hasNestedStructure(analysis.nested) ? Features.Nesting : undefined,
     visitor: createLightningCssStyleVisitor({
       analysis,

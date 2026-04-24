@@ -3,6 +3,7 @@ import { hasCssVarsBinding } from "../cssVars";
 import { registerScopedKeyframeRename } from "./keyframeNames";
 
 export type LightningCssNestedStructure = CssNestingStructureSummary;
+export type SourceScopeMode = "normalized-local" | "parsed" | "prepared-local" | "simple";
 
 export interface LightningCssStyleAnalysis {
   hasAnimationDeclarations: boolean;
@@ -14,6 +15,35 @@ export interface LightningCssStyleAnalysis {
 
 export function hasNestedStructure(nested: LightningCssNestedStructure): boolean {
   return nested.hasNestedSelectorChildren || nested.hasNestedAtRuleChildren;
+}
+
+export function deriveSourceScopeMode(
+  analysis: Pick<LightningCssStyleAnalysis, "hasScopedSelectorSpecials">,
+): SourceScopeMode {
+  return analysis.hasScopedSelectorSpecials ? "parsed" : "simple";
+}
+
+export function canPrepareLocalNestedSource(
+  analysis: Pick<LightningCssStyleAnalysis, "hasScopedSelectorSpecials" | "nested">,
+): boolean {
+  return !analysis.hasScopedSelectorSpecials && analysis.nested.hasNestedSelectorChildren;
+}
+
+export function deriveNormalizedSourceScopeMode(
+  previousAnalysis: Pick<LightningCssStyleAnalysis, "hasScopedSelectorSpecials" | "nested">,
+  nextAnalysis: Pick<LightningCssStyleAnalysis, "hasScopedSelectorSpecials">,
+  introducedScopedSelectorSpecials: boolean,
+): SourceScopeMode {
+  if (
+    introducedScopedSelectorSpecials &&
+    !previousAnalysis.hasScopedSelectorSpecials &&
+    !previousAnalysis.nested.hasMixedNestedChildren &&
+    nextAnalysis.hasScopedSelectorSpecials
+  ) {
+    return "normalized-local";
+  }
+
+  return deriveSourceScopeMode(nextAnalysis);
 }
 
 export function needsNestedStyleNormalization(analysis: LightningCssStyleAnalysis): boolean {

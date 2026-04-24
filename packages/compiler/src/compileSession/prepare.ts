@@ -1,5 +1,7 @@
 import { rewriteCssVarsInStyleSource, rewriteCssVarsInStyleSourceWithMap } from "../style/cssVars";
 import {
+  canPrepareLocalNestedSource,
+  deriveNormalizedSourceScopeMode,
   deriveAnalysisAfterNestedNormalization,
   needsNestedStyleNormalization,
 } from "../style/lightningcss/analysis";
@@ -39,6 +41,11 @@ export function normalizeNestedStylesInSession(session: CompileSession): void {
     context.filename,
     state.inputMap,
     context.sourceMap,
+    canPrepareLocalNestedSource(state.analysis)
+      ? {
+          preparedLocalScopeId: context.id,
+        }
+      : undefined,
   );
 
   if (!normalizedSource.normalized) {
@@ -47,9 +54,23 @@ export function normalizeNestedStylesInSession(session: CompileSession): void {
 
   state.source = normalizedSource.code;
   state.inputMap = normalizedSource.map;
-  state.analysis = deriveAnalysisAfterNestedNormalization(state.analysis, {
+  if (normalizedSource.preparedLocalSource) {
+    // This route already emitted the local scoped source for the normalized
+    // nested tree. Keep the original analysis so later nesting/animation
+    // decisions still reflect the authored structure.
+    state.sourceScopeMode = "prepared-local";
+    return;
+  }
+
+  const nextAnalysis = deriveAnalysisAfterNestedNormalization(state.analysis, {
     introducedScopedSelectorSpecials: normalizedSource.introducedScopedSelectorSpecials,
   });
+  state.sourceScopeMode = deriveNormalizedSourceScopeMode(
+    state.analysis,
+    nextAnalysis,
+    normalizedSource.introducedScopedSelectorSpecials,
+  );
+  state.analysis = nextAnalysis;
 }
 
 export function prepareCompileSessionForTransform(session: CompileSession): boolean {

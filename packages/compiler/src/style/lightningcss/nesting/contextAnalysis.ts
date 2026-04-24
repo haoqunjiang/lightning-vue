@@ -31,6 +31,10 @@ function createNestedScopeAnalysis(
  * local mode.
  */
 export function analyzeSelectorNestingContext(prelude: string): NestedScopeAnalysis {
+  if (!mayContainNestedScopeCarrier(prelude)) {
+    return none();
+  }
+
   try {
     return collapseNestedScopeContexts(
       parseSelectorListFromString(prelude, scopeCarrierParserOptions).map(
@@ -40,6 +44,12 @@ export function analyzeSelectorNestingContext(prelude: string): NestedScopeAnaly
   } catch {
     return createNestedScopeAnalysis(detectFallbackNestingContext(prelude));
   }
+}
+
+function mayContainNestedScopeCarrier(prelude: string): boolean {
+  return (
+    prelude.includes(":deep(") || prelude.includes(":slotted(") || prelude.includes(":global(")
+  );
 }
 
 function selectorContainsDeepContext(selector: Selector): NestedScopeAnalysis {

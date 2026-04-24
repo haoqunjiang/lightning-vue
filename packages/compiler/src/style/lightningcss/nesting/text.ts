@@ -26,6 +26,20 @@ export function wrapPreludeInNoInjectCarrier(block: CssBlockNode, s: MagicString
   return true;
 }
 
+export function overwriteBlockPrelude(
+  block: CssBlockNode,
+  s: MagicString,
+  nextPrelude: string,
+): boolean {
+  const trimmedRange = findTrimmedSourceRange(block.preludeSource, block.start);
+  if (!trimmedRange || trimmedRange.text === nextPrelude) {
+    return false;
+  }
+
+  s.overwrite(trimmedRange.start, trimmedRange.end, nextPrelude);
+  return true;
+}
+
 export function wrapTopLevelTextSegments(
   block: CssBlockNode,
   s: MagicString,

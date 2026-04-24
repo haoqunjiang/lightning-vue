@@ -53,6 +53,20 @@ export const compileSessionTraceCases: CompileSessionTraceCase[] = [
     },
   },
   {
+    title: "mixed nested scoped source preparation",
+    options: {
+      scoped: true,
+      source: `.card {
+  color: red;
+  .title { color: blue; }
+  @media (min-width: 600px) {
+    color: green;
+    .meta { color: black; }
+  }
+}`,
+    },
+  },
+  {
     title: "plain nested at-rules skip nested normalization",
     options: {
       scoped: true,
@@ -204,6 +218,7 @@ function formatCompileState(label: string, state: ReturnType<typeof createCompil
   return [
     `${label}.source=${JSON.stringify(state.source)}`,
     `${label}.analysis=nested:selectorChildren=${nested.hasNestedSelectorChildren},atRuleChildren=${nested.hasNestedAtRuleChildren},selectorsInAtRules=${nested.hasNestedSelectorDescendantsInAtRuleChildren},mixedChildren=${nested.hasMixedNestedChildren} specials:${state.analysis.hasScopedSelectorSpecials} animations:${state.analysis.hasAnimationDeclarations} keyframes:${Object.keys(state.analysis.keyframes).length}`,
+    `${label}.sourceScopeMode=${state.sourceScopeMode}`,
     `${label}.inputMap=${!!state.inputMap}`,
     `${label}.errors=${state.errors.length}`,
     `${label}.dependencies=${state.dependencies.size}`,

@@ -1,6 +1,6 @@
 import type { SFCAsyncStyleCompileOptions, SFCStyleCompileOptions } from "@vue/compiler-sfc";
 import type { RawSourceMap } from "@vue/compiler-core";
-import { analyzeLightningCssStyle } from "../style/lightningcss/analysis";
+import { analyzeLightningCssStyle, type SourceScopeMode } from "../style/lightningcss/analysis";
 
 export type CSSModulesOptions = NonNullable<SFCAsyncStyleCompileOptions["modulesOptions"]>;
 
@@ -20,6 +20,7 @@ export interface CompileState {
   dependencies: Set<string>;
   errors: Error[];
   inputMap: RawSourceMap | undefined;
+  sourceScopeMode: SourceScopeMode;
   source: string;
 }
 

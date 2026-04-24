@@ -1,5 +1,5 @@
 import type { RawSourceMap } from "@vue/compiler-core";
-import { analyzeLightningCssStyle } from "../style/lightningcss/analysis";
+import { analyzeLightningCssStyle, deriveSourceScopeMode } from "../style/lightningcss/analysis";
 import type { CompileContext, CompileOptions, CompileSession, CompileState } from "./types";
 
 export function shouldGenerateLightningCssSourceMap(
@@ -43,11 +43,13 @@ export function createCompileState(
     errors?: Error[];
   },
 ): CompileState {
+  const analysis = analyzeLightningCssStyle(source, context.id);
   return {
-    analysis: analyzeLightningCssStyle(source, context.id),
+    analysis,
     dependencies: new Set(options?.dependencies || []),
     errors: options?.errors ? [...options.errors] : [],
     inputMap,
+    sourceScopeMode: deriveSourceScopeMode(analysis),
     source,
   };
 }
