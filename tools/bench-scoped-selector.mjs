@@ -17,6 +17,13 @@ const defaultBenchFiles = [
   "bench/compileStyle.micro.bench.ts",
   "bench/scopedSelector.bench.ts",
 ];
+const color = {
+  cyan: "\x1b[36m",
+  dimCyan: "\x1b[2m\x1b[36m",
+  green: "\x1b[32m",
+  reset: "\x1b[0m",
+  yellow: "\x1b[33m",
+};
 
 const options = parseArgs(process.argv.slice(2));
 const benchFiles = options.benchFiles.length ? options.benchFiles : defaultBenchFiles;
@@ -357,7 +364,8 @@ function isHeadroomBenchRun(benchFiles) {
 
 function printLightningCssHeadroomSummary(benchmarks) {
   const rawEngineByScenario = new Map();
-  const noOpVisitorByScenario = new Map();
+  const preparedTransformByScenario = new Map();
+  const noOpSelectorVisitorByScenario = new Map();
   const groups = new Map();
 
   for (const benchmark of benchmarks) {
@@ -373,10 +381,12 @@ function printLightningCssHeadroomSummary(benchmarks) {
     });
     groups.set(scenario.category, bucket);
 
-    if (scenario.category === "lightningcss baseline: raw engine throughput") {
+    if (scenario.category === "lightningcss baseline: raw transform throughput") {
       rawEngineByScenario.set(scenario.label, benchmark);
-    } else if (scenario.category === "lightningcss baseline: no-op visitor throughput") {
-      noOpVisitorByScenario.set(scenario.label, benchmark);
+    } else if (scenario.category === "lightningcss baseline: Lightning CSS on compiler handoff") {
+      preparedTransformByScenario.set(scenario.label, benchmark);
+    } else if (scenario.category === "lightningcss baseline: no-op selector visitor throughput") {
+      noOpSelectorVisitorByScenario.set(scenario.label, benchmark);
     }
   }
 
@@ -389,30 +399,38 @@ function printLightningCssHeadroomSummary(benchmarks) {
     const rows = members
       .map(({ benchmark, scenario }) => {
         const rawEngine = rawEngineByScenario.get(scenario);
-        const noOpVisitor = noOpVisitorByScenario.get(scenario);
+        const preparedTransform = preparedTransformByScenario.get(scenario);
+        const noOpSelectorVisitor = noOpSelectorVisitorByScenario.get(scenario);
         if (
           !rawEngine ||
-          !noOpVisitor ||
+          !preparedTransform ||
+          !noOpSelectorVisitor ||
           typeof rawEngine.hz !== "number" ||
-          typeof noOpVisitor.hz !== "number" ||
+          typeof preparedTransform.hz !== "number" ||
+          typeof noOpSelectorVisitor.hz !== "number" ||
           typeof benchmark.hz !== "number"
         ) {
           return null;
         }
 
+        const fullCompilerMs = 1000 / benchmark.hz;
+        const handoffTransformMs = 1000 / preparedTransform.hz;
+        const compilerJsMs = fullCompilerMs - handoffTransformMs;
+
         return {
           label: scenario,
           benchmark,
-          rawRetention: benchmark.hz / rawEngine.hz,
-          rawSlowdown: rawEngine.hz / benchmark.hz,
+          compilerJsMs,
+          compilerJsOverheadShare: compilerJsMs / fullCompilerMs,
+          fullCompilerMs,
+          handoffTransformMs,
           rawEngine,
-          noOpRetention: benchmark.hz / noOpVisitor.hz,
-          noOpSlowdown: noOpVisitor.hz / benchmark.hz,
-          noOpVisitor,
+          preparedTransform,
+          noOpSelectorVisitor,
         };
       })
       .filter(Boolean)
-      .sort((left, right) => left.noOpRetention - right.noOpRetention);
+      .sort((left, right) => right.compilerJsOverheadShare - left.compilerJsOverheadShare);
 
     if (rows.length) {
       headroomGroups.push([category, rows]);
@@ -426,29 +444,87 @@ function printLightningCssHeadroomSummary(benchmarks) {
   console.log("");
   console.log("Compiler headroom:");
   console.log(
-    "  Each row uses the same corpus three ways: raw Lightning CSS, Lightning CSS with a no-op visitor, and the full compiler pipeline.",
+    `  ${muted("Main metric")}`,
   );
   console.log(
-    "  The no-op visitor numbers are a secondary reference for Rust-to-JavaScript hook overhead. They are not the main usage baseline, because some fast paths finish before the final Lightning visitor stage.",
+    `    compiler JS overhead = (full compiler time - handoff transform time) / full compiler time`,
+  );
+  console.log(
+    `    Includes analysis, source rewrites, selector handling, planning, decoding, and finalization.`,
+  );
+  console.log("");
+  console.log(
+    `  ${muted("CSS inputs")}`,
+  );
+  console.log(
+    "    authored  Original benchmark CSS.",
+  );
+  console.log(
+    "    handoff   CSS passed to Lightning CSS after v-bind rewrites, nested normalization,",
+  );
+  console.log(
+    "              source scoping, and transform planning.",
+  );
+  console.log(
+    "              Preparation may remove Vue selector carriers or lower nesting before",
+  );
+  console.log(
+    "              Lightning CSS parses the source, so handoff throughput can differ.",
+  );
+  console.log("");
+  console.log(
+    `  ${muted("Secondary reference")}`,
+  );
+  console.log(
+    "    forced selector hook = authored CSS transformed with an empty selector callback.",
+  );
+  console.log(
+    "                           Estimates selector-hook cost for visitor-based routes.",
   );
   for (const [category, rows] of headroomGroups) {
+    console.log("");
     console.log(`- ${category}`);
     for (const row of rows) {
-      console.log(`  - ${row.label}`);
+      const preparedTransformComparison = formatThroughputComparison(
+        row.preparedTransform.hz,
+        row.rawEngine.hz,
+      );
+      const noOpSelectorVisitorComparison = formatThroughputComparison(
+        row.noOpSelectorVisitor.hz,
+        row.rawEngine.hz,
+      );
+      console.log("");
+      console.log(`  ${row.label}`);
       console.log(
-        `    raw lightningcss: ${highlightMetric(formatHertz(row.rawEngine.hz))} | no-op visitor: ${highlightMetric(
-          formatHertz(row.noOpVisitor.hz),
-        )} | full compiler: ${highlightMetric(formatHertz(row.benchmark.hz))}`,
+        `    ${metric(formatPercent(row.compilerJsOverheadShare), color.yellow)}  compiler JS overhead`,
       );
       console.log(
-        `    no-op visitor overhead: ${highlightMetric(
-          formatPercent(row.noOpVisitor.hz / row.rawEngine.hz),
-        )} retained, ${highlightMetric(
-          formatMultiplier(row.rawEngine.hz / row.noOpVisitor.hz),
-        )} slower`,
+        `           ${metric(formatMilliseconds(row.compilerJsMs), color.yellow)}  compiler JS work`,
       );
       console.log(
-        `    compiler overhead above the hook baseline: ${highlightMetric(formatPercent(row.noOpRetention))} retained, ${highlightMetric(formatMultiplier(row.noOpSlowdown))} slower`,
+        `           ${metric(formatMilliseconds(row.handoffTransformMs), color.green)}  Lightning CSS handoff`,
+      );
+      console.log("");
+      console.log(`    ${muted("throughput")}`);
+      console.log(
+        `           ${metric(formatHertz(row.benchmark.hz), color.cyan)}  full compiler`,
+      );
+      console.log(
+        `           ${metric(formatHertz(row.preparedTransform.hz), color.green)}  handoff transform`,
+      );
+      console.log("");
+      console.log(`    ${muted("context")}`);
+      console.log(
+        `           ${metric(formatHertz(row.rawEngine.hz), color.dimCyan)}  authored CSS`,
+      );
+      console.log(
+        `           ${metric(formatComparedToBaseline(preparedTransformComparison, "authored"), color.dimCyan)}  handoff/authored`,
+      );
+      console.log(
+        `           ${metric(formatHertz(row.noOpSelectorVisitor.hz), color.dimCyan)}  forced selector hook`,
+      );
+      console.log(
+        `           ${metric(formatComparedToBaseline(noOpSelectorVisitorComparison, "authored"), color.dimCyan)}  hook/authored`,
       );
     }
   }
@@ -508,7 +584,7 @@ function printGroupedDeltaSummary(changed) {
 function getHeadroomScenarioLabel(benchmark) {
   const { suite } = splitGroupLabel(benchmark);
 
-  if (suite === "lightningcss baseline: raw engine throughput") {
+  if (suite === "lightningcss baseline: raw transform throughput") {
     return benchmark.name.startsWith("lightningcss ")
       ? {
           category: suite,
@@ -517,7 +593,16 @@ function getHeadroomScenarioLabel(benchmark) {
       : null;
   }
 
-  if (suite === "lightningcss baseline: no-op visitor throughput") {
+  if (suite === "lightningcss baseline: Lightning CSS on compiler handoff") {
+    return benchmark.name.startsWith("lightningcss ")
+      ? {
+          category: suite,
+          label: benchmark.name.slice("lightningcss ".length),
+        }
+      : null;
+  }
+
+  if (suite === "lightningcss baseline: no-op selector visitor throughput") {
     return benchmark.name.startsWith("lightningcss ")
       ? {
           category: suite,
@@ -554,8 +639,33 @@ function formatMultiplier(value) {
   return `${value.toFixed(2)}x`;
 }
 
-function highlightMetric(value) {
-  return `\x1b[1m${value}\x1b[0m`;
+function formatThroughputComparison(currentHz, baselineHz) {
+  if (currentHz === baselineHz) {
+    return {
+      direction: "same speed",
+      multiplier: formatMultiplier(1),
+    };
+  }
+
+  if (currentHz > baselineHz) {
+    return {
+      direction: "faster",
+      multiplier: formatMultiplier(currentHz / baselineHz),
+    };
+  }
+
+  return {
+    direction: "slower",
+    multiplier: formatMultiplier(baselineHz / currentHz),
+  };
+}
+
+function formatComparedToBaseline(comparison, baselineLabel) {
+  if (comparison.direction === "same speed") {
+    return `${comparison.multiplier} same speed as ${baselineLabel}`;
+  }
+
+  return `${comparison.multiplier} ${comparison.direction} than ${baselineLabel}`;
 }
 
 function formatPercentDelta(current, baseline, lowerIsBetter) {
@@ -571,6 +681,18 @@ function formatPercentDelta(current, baseline, lowerIsBetter) {
           ? "lower"
           : "higher";
   return ` (${formatSignedPercent(delta)} vs baseline, ${direction})`;
+}
+
+function highlightMetric(value) {
+  return metric(value, color.cyan);
+}
+
+function metric(value, metricColor) {
+  return `\x1b[1m${metricColor}${value}${color.reset}`;
+}
+
+function muted(value) {
+  return `\x1b[2m${value}${color.reset}`;
 }
 
 function formatSignedPercent(value) {

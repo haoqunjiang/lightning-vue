@@ -4,8 +4,18 @@ import {
   compileStyle as _compileStyleWithLightningCss,
   createLightningCssStyleVisitor,
 } from "../src";
+import {
+  createCompileContext,
+  createCompileSession,
+  createCompileState,
+  createTransformPlan,
+  prepareCompileSessionForTransform,
+} from "../src/compileSession";
 import { analyzeLightningCssStyle } from "../src/style/lightningcss/analysis";
 import { normalizeNestedStyleBlocks } from "../src/style/lightningcss/nesting/normalize";
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 
 export const compileStyle = _compileStyle;
 export const compileStyleWithLightningCss = _compileStyleWithLightningCss;
@@ -228,12 +238,67 @@ export function transformWithLightningCss(
 ) {
   return transform({
     filename: "bench.css",
-    code: new TextEncoder().encode(source),
+    code: textEncoder.encode(source),
     nonStandard: {
       deepSelectorCombinator: true,
     },
     ...options,
   }).code;
+}
+
+export function transformWithLightningCssCode(
+  source: string,
+  options: Omit<Parameters<typeof transform>[0], "filename" | "code"> = {},
+) {
+  return textDecoder.decode(transformWithLightningCss(source, options));
+}
+
+export function createNoOpLightningCssSelectorVisitor() {
+  return {
+    Selector() {},
+  };
+}
+
+type LightningCssTransformOptions = Omit<Parameters<typeof transform>[0], "filename" | "code">;
+
+export interface PreparedLightningCssTransform {
+  code: string;
+  options: LightningCssTransformOptions;
+}
+
+export function prepareLightningCssTransformCeiling(source: string): PreparedLightningCssTransform {
+  const context = createCompileContext({
+    source,
+    filename: "bench.css",
+    id: "data-v-bench",
+    scoped: true,
+  });
+  const state = createCompileState(source, undefined, context);
+  const session = createCompileSession(context, state);
+
+  if (!prepareCompileSessionForTransform(session)) {
+    throw state.errors[0] ?? new Error("Failed to prepare benchmark source");
+  }
+
+  const plan = createTransformPlan(session);
+  const options: LightningCssTransformOptions = plan.includeNesting
+    ? {
+        include: Features.Nesting,
+      }
+    : {};
+
+  if (!plan.selectorsScopedInSource) {
+    options.visitor = createNoOpLightningCssSelectorVisitor();
+  }
+
+  return {
+    code: plan.code,
+    options,
+  };
+}
+
+export function transformPreparedLightningCssCode(prepared: PreparedLightningCssTransform) {
+  return transformWithLightningCssCode(prepared.code, prepared.options);
 }
 
 export const normalizedNestedSelectorSource = normalizeNestedStyleBlocks(
@@ -272,7 +337,11 @@ export const loweredNormalizedNestedMixedSource = new TextDecoder().decode(
 export function warmupCompileBenchSuite() {
   compileWith(compileStyleWithLightningCss, ".warmup { color: red; }");
   transformWithLightningCss(".warmup { color: red; }");
-  transformWithLightningCss(".warmup { color: red; }", { visitor: {} });
+  transformWithLightningCssCode(".warmup { color: red; }");
+  transformWithLightningCssCode(".warmup { color: red; }", {
+    visitor: createNoOpLightningCssSelectorVisitor(),
+  });
+  transformPreparedLightningCssCode(prepareLightningCssTransformCeiling(".warmup { color: red; }"));
   transformWithLightningCss(".warmup { color: red; }", {
     visitor: createLightningCssStyleVisitor({
       analysis: analyzeLightningCssStyle(".warmup { color: red; }", "data-v-bench"),

@@ -1,100 +1,169 @@
 import { bench, describe } from "vitest";
 import {
   animationScopedSource,
+  createNoOpLightningCssSelectorVisitor,
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
   nestedAtRuleParityCases,
   nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
+  prepareLightningCssTransformCeiling,
   simpleScopedSource,
-  transformWithLightningCss,
+  transformPreparedLightningCssCode,
+  transformWithLightningCssCode,
   warmupCompileBenchSuite,
   wrappedDeepSelectorScopedSource,
 } from "./compileStyleBenchShared";
 
 warmupCompileBenchSuite();
 
-function transformWithLightningCssNoOpVisitor(source: string) {
-  return transformWithLightningCss(source, { visitor: {} });
+function transformWithLightningCssNoOpSelectorVisitor(source: string) {
+  return transformWithLightningCssCode(source, {
+    visitor: createNoOpLightningCssSelectorVisitor(),
+  });
 }
 
-describe("lightningcss baseline: raw engine throughput", () => {
+const preparedSimpleScopedSource = prepareLightningCssTransformCeiling(simpleScopedSource);
+const preparedNestedSelectorScopedSource = prepareLightningCssTransformCeiling(
+  nestedSelectorScopedSource,
+);
+const preparedDeepSlottedGlobalSelectorSource = prepareLightningCssTransformCeiling(
+  deepSlottedGlobalSelectorSource,
+);
+const preparedNestedAtRuleParityCases = nestedAtRuleParityCases.map(({ label, source }) => ({
+  label,
+  prepared: prepareLightningCssTransformCeiling(source),
+}));
+const preparedNestedMixedScopedSource =
+  prepareLightningCssTransformCeiling(nestedMixedScopedSource);
+const preparedAnimationScopedSource = prepareLightningCssTransformCeiling(animationScopedSource);
+const preparedWrappedDeepSelectorScopedSource = prepareLightningCssTransformCeiling(
+  wrappedDeepSelectorScopedSource,
+);
+const preparedMixedRealisticScopedSource = prepareLightningCssTransformCeiling(
+  mixedRealisticScopedSource,
+);
+const preparedNestedWrappedDeepSlottedSelectorScopedSource = prepareLightningCssTransformCeiling(
+  nestedWrappedDeepSlottedSelectorScopedSource,
+);
+
+describe("lightningcss baseline: raw transform throughput", () => {
   bench("lightningcss simple selectors", () => {
-    transformWithLightningCss(simpleScopedSource);
+    transformWithLightningCssCode(simpleScopedSource);
   });
 
   bench("lightningcss nested selectors", () => {
-    transformWithLightningCss(nestedSelectorScopedSource);
+    transformWithLightningCssCode(nestedSelectorScopedSource);
   });
 
   bench("lightningcss :deep() / :slotted() / :global() selectors", () => {
-    transformWithLightningCss(deepSlottedGlobalSelectorSource);
+    transformWithLightningCssCode(deepSlottedGlobalSelectorSource);
   });
 
   for (const { label, source } of nestedAtRuleParityCases) {
     bench(`lightningcss ${label}`, () => {
-      transformWithLightningCss(source);
+      transformWithLightningCssCode(source);
     });
   }
 
   bench("lightningcss mixed nested selectors and at-rules", () => {
-    transformWithLightningCss(nestedMixedScopedSource);
+    transformWithLightningCssCode(nestedMixedScopedSource);
   });
 
   bench("lightningcss animation keyframes", () => {
-    transformWithLightningCss(animationScopedSource);
+    transformWithLightningCssCode(animationScopedSource);
   });
 
   bench("lightningcss selectors that wrap :deep()", () => {
-    transformWithLightningCss(wrappedDeepSelectorScopedSource);
+    transformWithLightningCssCode(wrappedDeepSelectorScopedSource);
   });
 
   bench("lightningcss mixed realistic styles", () => {
-    transformWithLightningCss(mixedRealisticScopedSource);
+    transformWithLightningCssCode(mixedRealisticScopedSource);
   });
 
   bench("lightningcss nested at-rules with :slotted() and wrapped :deep()", () => {
-    transformWithLightningCss(nestedWrappedDeepSlottedSelectorScopedSource);
+    transformWithLightningCssCode(nestedWrappedDeepSlottedSelectorScopedSource);
   });
 });
 
-describe("lightningcss baseline: no-op visitor throughput", () => {
+describe("lightningcss baseline: Lightning CSS on compiler handoff", () => {
   bench("lightningcss simple selectors", () => {
-    transformWithLightningCssNoOpVisitor(simpleScopedSource);
+    transformPreparedLightningCssCode(preparedSimpleScopedSource);
   });
 
   bench("lightningcss nested selectors", () => {
-    transformWithLightningCssNoOpVisitor(nestedSelectorScopedSource);
+    transformPreparedLightningCssCode(preparedNestedSelectorScopedSource);
   });
 
   bench("lightningcss :deep() / :slotted() / :global() selectors", () => {
-    transformWithLightningCssNoOpVisitor(deepSlottedGlobalSelectorSource);
+    transformPreparedLightningCssCode(preparedDeepSlottedGlobalSelectorSource);
   });
 
-  for (const { label, source } of nestedAtRuleParityCases) {
+  for (const { label, prepared } of preparedNestedAtRuleParityCases) {
     bench(`lightningcss ${label}`, () => {
-      transformWithLightningCssNoOpVisitor(source);
+      transformPreparedLightningCssCode(prepared);
     });
   }
 
   bench("lightningcss mixed nested selectors and at-rules", () => {
-    transformWithLightningCssNoOpVisitor(nestedMixedScopedSource);
+    transformPreparedLightningCssCode(preparedNestedMixedScopedSource);
   });
 
   bench("lightningcss animation keyframes", () => {
-    transformWithLightningCssNoOpVisitor(animationScopedSource);
+    transformPreparedLightningCssCode(preparedAnimationScopedSource);
   });
 
   bench("lightningcss selectors that wrap :deep()", () => {
-    transformWithLightningCssNoOpVisitor(wrappedDeepSelectorScopedSource);
+    transformPreparedLightningCssCode(preparedWrappedDeepSelectorScopedSource);
   });
 
   bench("lightningcss mixed realistic styles", () => {
-    transformWithLightningCssNoOpVisitor(mixedRealisticScopedSource);
+    transformPreparedLightningCssCode(preparedMixedRealisticScopedSource);
   });
 
   bench("lightningcss nested at-rules with :slotted() and wrapped :deep()", () => {
-    transformWithLightningCssNoOpVisitor(nestedWrappedDeepSlottedSelectorScopedSource);
+    transformPreparedLightningCssCode(preparedNestedWrappedDeepSlottedSelectorScopedSource);
+  });
+});
+
+describe("lightningcss baseline: no-op selector visitor throughput", () => {
+  bench("lightningcss simple selectors", () => {
+    transformWithLightningCssNoOpSelectorVisitor(simpleScopedSource);
+  });
+
+  bench("lightningcss nested selectors", () => {
+    transformWithLightningCssNoOpSelectorVisitor(nestedSelectorScopedSource);
+  });
+
+  bench("lightningcss :deep() / :slotted() / :global() selectors", () => {
+    transformWithLightningCssNoOpSelectorVisitor(deepSlottedGlobalSelectorSource);
+  });
+
+  for (const { label, source } of nestedAtRuleParityCases) {
+    bench(`lightningcss ${label}`, () => {
+      transformWithLightningCssNoOpSelectorVisitor(source);
+    });
+  }
+
+  bench("lightningcss mixed nested selectors and at-rules", () => {
+    transformWithLightningCssNoOpSelectorVisitor(nestedMixedScopedSource);
+  });
+
+  bench("lightningcss animation keyframes", () => {
+    transformWithLightningCssNoOpSelectorVisitor(animationScopedSource);
+  });
+
+  bench("lightningcss selectors that wrap :deep()", () => {
+    transformWithLightningCssNoOpSelectorVisitor(wrappedDeepSelectorScopedSource);
+  });
+
+  bench("lightningcss mixed realistic styles", () => {
+    transformWithLightningCssNoOpSelectorVisitor(mixedRealisticScopedSource);
+  });
+
+  bench("lightningcss nested at-rules with :slotted() and wrapped :deep()", () => {
+    transformWithLightningCssNoOpSelectorVisitor(nestedWrappedDeepSlottedSelectorScopedSource);
   });
 });

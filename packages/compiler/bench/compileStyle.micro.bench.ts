@@ -15,6 +15,7 @@ import { normalizeNestedStyleBlocks } from "../src/style/lightningcss/nesting/no
 import { scopeLightningCssSource } from "../src/style/lightningcss/scoped/source";
 import {
   animationScopedSource,
+  createNoOpLightningCssSelectorVisitor,
   deepSlottedGlobalSelectorSource,
   loweredNormalizedNestedAtRuleSource,
   loweredNormalizedNestedMixedSource,
@@ -86,8 +87,10 @@ describe("lightningcss micro: transform breakdown", () => {
     transformWithLightningCss(simpleScopedSource);
   });
 
-  bench("transform + no-op visitor simple selectors", () => {
-    transformWithLightningCss(simpleScopedSource, { visitor: {} });
+  bench("transform + no-op selector visitor simple selectors", () => {
+    transformWithLightningCss(simpleScopedSource, {
+      visitor: createNoOpLightningCssSelectorVisitor(),
+    });
   });
 
   bench("transform + scoped visitor simple selectors", () => {
@@ -150,8 +153,10 @@ describe("lightningcss micro: transform breakdown with :deep() / :slotted() / :g
     transformWithLightningCss(deepSlottedGlobalSelectorSource);
   });
 
-  bench("transform + no-op visitor :deep() / :slotted() / :global() selectors", () => {
-    transformWithLightningCss(deepSlottedGlobalSelectorSource, { visitor: {} });
+  bench("transform + no-op selector visitor :deep() / :slotted() / :global() selectors", () => {
+    transformWithLightningCss(deepSlottedGlobalSelectorSource, {
+      visitor: createNoOpLightningCssSelectorVisitor(),
+    });
   });
 
   bench("transform + scoped visitor :deep() / :slotted() / :global() selectors", () => {
@@ -170,8 +175,10 @@ describe("lightningcss micro: transform breakdown with selectors that wrap :deep
     transformWithLightningCss(wrappedDeepSelectorScopedSource);
   });
 
-  bench("transform + no-op visitor selectors that wrap :deep()", () => {
-    transformWithLightningCss(wrappedDeepSelectorScopedSource, { visitor: {} });
+  bench("transform + no-op selector visitor selectors that wrap :deep()", () => {
+    transformWithLightningCss(wrappedDeepSelectorScopedSource, {
+      visitor: createNoOpLightningCssSelectorVisitor(),
+    });
   });
 
   bench("transform + scoped visitor selectors that wrap :deep()", () => {
@@ -252,8 +259,10 @@ describe("lightningcss micro: nested selector normalization", () => {
     transformWithLightningCss(nestedSelectorScopedSource);
   });
 
-  bench("transform + no-op visitor nested selectors", () => {
-    transformWithLightningCss(nestedSelectorScopedSource, { visitor: {} });
+  bench("transform + no-op selector visitor nested selectors", () => {
+    transformWithLightningCss(nestedSelectorScopedSource, {
+      visitor: createNoOpLightningCssSelectorVisitor(),
+    });
   });
 
   bench("normalize nested selector blocks", () => {
@@ -341,8 +350,10 @@ describe("lightningcss micro: nested at-rule normalization", () => {
     });
   });
 
-  bench("transform + no-op visitor nested at-rules", () => {
-    transformWithLightningCss(nestedAtRuleScopedSource, { visitor: {} });
+  bench("transform + no-op selector visitor nested at-rules", () => {
+    transformWithLightningCss(nestedAtRuleScopedSource, {
+      visitor: createNoOpLightningCssSelectorVisitor(),
+    });
   });
 
   bench("scope source lowered normalized nested at-rules", () => {
