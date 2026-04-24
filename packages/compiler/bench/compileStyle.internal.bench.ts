@@ -3,7 +3,6 @@ import {
   animationScopedSource,
   compileStyleWithLightningCss,
   compileWith,
-  compileWithLightningCssUsingNormalizedNestedScoping,
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
   nestedAtRuleScopedSource,
@@ -51,29 +50,5 @@ describe("compileStyle internal: lightningcss end to end", () => {
 
   bench("lightningcss mixed realistic styles", () => {
     compileWith(compileStyleWithLightningCss, mixedRealisticScopedSource);
-  });
-});
-
-describe("compileStyle internal: normalized source path", () => {
-  bench("lightningcss nested at-rules (normalized source path)", () => {
-    compileWithLightningCssUsingNormalizedNestedScoping(nestedAtRuleScopedSource);
-  });
-
-  bench("lightningcss mixed nested selectors and at-rules (normalized source path)", () => {
-    compileWithLightningCssUsingNormalizedNestedScoping(nestedMixedScopedSource);
-  });
-
-  bench("lightningcss nested selectors (normalized source path)", () => {
-    compileWithLightningCssUsingNormalizedNestedScoping(nestedSelectorScopedSource);
-  });
-
-  bench("lightningcss nested at-rules with :slotted() and wrapped :deep() (normalized source path)", () => {
-    compileWithLightningCssUsingNormalizedNestedScoping(
-      nestedWrappedDeepSlottedSelectorScopedSource,
-    );
-  });
-
-  bench("lightningcss mixed realistic styles (normalized source path)", () => {
-    compileWithLightningCssUsingNormalizedNestedScoping(mixedRealisticScopedSource);
   });
 });

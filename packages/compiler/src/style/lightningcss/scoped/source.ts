@@ -56,23 +56,9 @@ function createSourcePreludeDirectRewrite(
   mode: SourceScopeMode,
   id: string,
 ): ((prelude: string) => string | undefined) | undefined {
-  switch (mode) {
-    case "simple":
-      return (prelude) => scopeSelectorPrelude(prelude, id);
-    case "normalized-local":
-      return (prelude) =>
-        unwrapNormalizedNoInjectCarrier(prelude) ?? scopeSelectorPrelude(prelude, id);
-    default:
-      return undefined;
-  }
-}
-
-function unwrapNormalizedNoInjectCarrier(prelude: string): string | undefined {
-  const trimmedPrelude = prelude.trim();
-  if (!trimmedPrelude.startsWith(":global(") || !trimmedPrelude.endsWith(")")) {
-    return undefined;
+  if (mode === "simple") {
+    return (prelude) => scopeSelectorPrelude(prelude, id);
   }
 
-  const innerPrelude = trimmedPrelude.slice(":global(".length, -1).trim();
-  return innerPrelude || undefined;
+  return undefined;
 }

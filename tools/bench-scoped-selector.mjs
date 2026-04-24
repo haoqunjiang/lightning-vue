@@ -382,10 +382,7 @@ function printLightningCssHeadroomSummary(benchmarks) {
 
   const headroomGroups = [];
   for (const [category, members] of groups) {
-    if (
-      category !== "compileStyle internal: lightningcss end to end" &&
-      category !== "compileStyle internal: normalized source path"
-    ) {
+    if (category !== "compileStyle internal: lightningcss end to end") {
       continue;
     }
 
@@ -534,18 +531,6 @@ function getHeadroomScenarioLabel(benchmark) {
       ? {
           category: suite,
           label: benchmark.name.slice("lightningcss ".length),
-        }
-      : null;
-  }
-
-  if (suite === "compileStyle internal: normalized source path") {
-    return benchmark.name.startsWith("lightningcss ") &&
-      benchmark.name.endsWith(" (normalized source path)")
-      ? {
-          category: suite,
-          label: benchmark.name
-            .slice("lightningcss ".length)
-            .replace(/ \(normalized source path\)$/, ""),
         }
       : null;
   }

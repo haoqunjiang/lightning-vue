@@ -1,8 +1,8 @@
 import { rewriteCssVarsInStyleSource, rewriteCssVarsInStyleSourceWithMap } from "../style/cssVars";
 import {
   canPrepareLocalNestedSource,
-  deriveNormalizedSourceScopeMode,
   deriveAnalysisAfterNestedNormalization,
+  deriveSourceScopeMode,
   needsNestedStyleNormalization,
 } from "../style/lightningcss/analysis";
 import { normalizeNestedStyleBlocks } from "../style/lightningcss/nesting/normalize";
@@ -65,11 +65,7 @@ export function normalizeNestedStylesInSession(session: CompileSession): void {
   const nextAnalysis = deriveAnalysisAfterNestedNormalization(state.analysis, {
     introducedScopedSelectorSpecials: normalizedSource.introducedScopedSelectorSpecials,
   });
-  state.sourceScopeMode = deriveNormalizedSourceScopeMode(
-    state.analysis,
-    nextAnalysis,
-    normalizedSource.introducedScopedSelectorSpecials,
-  );
+  state.sourceScopeMode = deriveSourceScopeMode(nextAnalysis);
   state.analysis = nextAnalysis;
 }
 
