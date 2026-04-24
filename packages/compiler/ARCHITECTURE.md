@@ -215,9 +215,9 @@ Those instructions answer four questions:
   later generic source-scoping walk can skip that tree
 
 For most nested styles, `normalize.ts` just applies those instructions. On
-plain local nested trees, it also derives a smaller rewrite plan from them so
-that the same pass can emit source whose local selectors already carry the
-scope attribute.
+plain local nested trees, it also derives the scope-attribute rewrites from
+them so that the same pass can emit source whose local selectors already carry
+the scope attribute.
 
 This stage stays source-based because it benchmarks better than the AST-heavy
 alternative for carrier-heavy nested styles.

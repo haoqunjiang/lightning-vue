@@ -3,6 +3,7 @@ import type { RawSourceMap } from "@vue/compiler-core";
 import { analyzeLightningCssStyle, type SourceScopeMode } from "../style/lightningcss/analysis";
 
 export type CSSModulesOptions = NonNullable<SFCAsyncStyleCompileOptions["modulesOptions"]>;
+export type CompileSourceScopeMode = SourceScopeMode | "prepared-local";
 
 export interface CompileContext {
   filename: string;
@@ -20,7 +21,7 @@ export interface CompileState {
   dependencies: Set<string>;
   errors: Error[];
   inputMap: RawSourceMap | undefined;
-  sourceScopeMode: SourceScopeMode;
+  sourceScopeMode: CompileSourceScopeMode;
   source: string;
 }
 

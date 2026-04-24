@@ -3,7 +3,7 @@ import { hasCssVarsBinding } from "../cssVars";
 import { registerScopedKeyframeRename } from "./keyframeNames";
 
 export type LightningCssNestedStructure = CssNestingStructureSummary;
-export type SourceScopeMode = "parsed" | "prepared-local" | "simple";
+export type SourceScopeMode = "parsed" | "simple";
 
 export interface LightningCssStyleAnalysis {
   hasAnimationDeclarations: boolean;

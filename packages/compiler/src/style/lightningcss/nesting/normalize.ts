@@ -30,9 +30,8 @@ interface ApplyBlockDecorationResult {
   introducedScopedSelectorSpecials: boolean;
 }
 
-interface PreparedLocalScopeBlockPlan {
+interface PreparedLocalScopeRewrite {
   block: CssBlockNode;
-  children: PreparedLocalScopeBlockPlan[];
   declarationWrapperPreludeRewrite: string | null;
   preludeRewrite: string | null;
   warningMessage: string | null;
@@ -63,15 +62,12 @@ export function normalizeNestedStyleBlocks(
     introducedScopedSelectorSpecials ||= result.changed && result.introducedScopedSelectorSpecials;
   };
 
-  const preparedLocalScopePlan = options?.preparedLocalScopeId
-    ? createPreparedLocalScopePlan(roots, options.preparedLocalScopeId)
+  const preparedLocalScopeRewrites = options?.preparedLocalScopeId
+    ? createPreparedLocalScopeRewrites(roots, options.preparedLocalScopeId)
     : null;
 
-  if (preparedLocalScopePlan) {
-    for (const blockPlan of preparedLocalScopePlan) {
-      const result = applyPreparedLocalScopePlan(blockPlan, s, source);
-      normalized ||= result.changed;
-    }
+  if (preparedLocalScopeRewrites) {
+    normalized ||= applyPreparedLocalScopeRewrites(preparedLocalScopeRewrites, s, source);
     preparedLocalSource = normalized;
   } else {
     for (const block of roots) {
@@ -116,33 +112,34 @@ export function normalizeNestedStyleBlocks(
   };
 }
 
-function createPreparedLocalScopePlan(
+function createPreparedLocalScopeRewrites(
   roots: CssBlockNode[],
   id: string,
-): PreparedLocalScopeBlockPlan[] | null {
-  const plans: PreparedLocalScopeBlockPlan[] = [];
+): PreparedLocalScopeRewrite[] | null {
+  const rewrites: PreparedLocalScopeRewrite[] = [];
   for (const block of roots) {
-    const plannedBlock = createPreparedLocalScopePlanForBlock(
+    const collected = collectPreparedLocalScopeRewrites(
       block,
       createInitialNestedNormalizationContext(),
       id,
+      rewrites,
     );
-    if (!plannedBlock) {
+    if (!collected) {
       return null;
     }
-    plans.push(plannedBlock);
   }
-  return plans;
+  return rewrites;
 }
 
-function createPreparedLocalScopePlanForBlock(
+function collectPreparedLocalScopeRewrites(
   block: CssBlockNode,
   context: NestedNormalizationContext,
   id: string,
-): PreparedLocalScopeBlockPlan | null {
+  rewrites: PreparedLocalScopeRewrite[],
+): boolean {
   const instructions = createNestedBlockNormalizationInstructions(block, context);
   if (!instructions) {
-    return null;
+    return false;
   }
 
   const preludeRewrite =
@@ -150,67 +147,67 @@ function createPreparedLocalScopePlanForBlock(
       ? (scopeSelectorPrelude(block.normalizedPrelude, id) ?? null)
       : null;
   if (block.blockKind === "style" && !instructions.disableCurrentRuleInjection && !preludeRewrite) {
-    return null;
+    return false;
   }
 
   const declarationWrapperPreludeRewrite = instructions.declarationWrapperPrelude
     ? (scopeSelectorPrelude(instructions.declarationWrapperPrelude, id) ?? null)
     : null;
   if (instructions.declarationWrapperPrelude && !declarationWrapperPreludeRewrite) {
-    return null;
+    return false;
   }
 
-  const children: PreparedLocalScopeBlockPlan[] = [];
-  for (const child of block.children) {
-    const plannedChild = createPreparedLocalScopePlanForBlock(
-      child,
-      getChildNormalizationContext(child.blockKind, instructions),
-      id,
-    );
-    if (!plannedChild) {
-      return null;
-    }
-    children.push(plannedChild);
-  }
-
-  return {
+  rewrites.push({
     block,
-    children,
     declarationWrapperPreludeRewrite,
     preludeRewrite,
     warningMessage: "warningMessage" in instructions ? instructions.warningMessage : null,
-  };
+  });
+
+  for (const child of block.children) {
+    if (
+      !collectPreparedLocalScopeRewrites(
+        child,
+        getChildNormalizationContext(child.blockKind, instructions),
+        id,
+        rewrites,
+      )
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
-function applyPreparedLocalScopePlan(
-  blockPlan: PreparedLocalScopeBlockPlan,
+function applyPreparedLocalScopeRewrites(
+  rewrites: PreparedLocalScopeRewrite[],
   s: MagicString,
   source: string,
-): { changed: boolean } {
-  if (blockPlan.warningMessage) {
-    warnOnce(blockPlan.warningMessage);
-  }
-
+): boolean {
   let changed = false;
-  if (blockPlan.preludeRewrite) {
-    changed ||= overwriteBlockPrelude(blockPlan.block, s, blockPlan.preludeRewrite);
+  for (const rewrite of rewrites) {
+    if (rewrite.warningMessage) {
+      warnOnce(rewrite.warningMessage);
+    }
+
+    if (rewrite.preludeRewrite) {
+      const preludeChanged = overwriteBlockPrelude(rewrite.block, s, rewrite.preludeRewrite);
+      changed ||= preludeChanged;
+    }
+
+    if (rewrite.declarationWrapperPreludeRewrite) {
+      const declarationsChanged = wrapTopLevelTextSegments(
+        rewrite.block,
+        s,
+        source,
+        rewrite.declarationWrapperPreludeRewrite,
+      );
+      changed ||= declarationsChanged;
+    }
   }
 
-  if (blockPlan.declarationWrapperPreludeRewrite) {
-    changed ||= wrapTopLevelTextSegments(
-      blockPlan.block,
-      s,
-      source,
-      blockPlan.declarationWrapperPreludeRewrite,
-    );
-  }
-
-  for (const child of blockPlan.children) {
-    const childResult = applyPreparedLocalScopePlan(child, s, source);
-    changed ||= childResult.changed;
-  }
-
-  return { changed };
+  return changed;
 }
 
 function normalizeNestedBlock(
