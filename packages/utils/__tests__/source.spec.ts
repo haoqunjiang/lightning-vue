@@ -301,6 +301,11 @@ describe("source-facing API", () => {
   });
 
   test("scopeSelectorPrelude rewrites simple selectors and recurses into containers", () => {
+    expect(scopeSelectorPrelude(" .foo ", "data-test")).toBe(".foo[data-test]");
+    expect(scopeSelectorPrelude("#app", "data-test")).toBe("#app[data-test]");
+    expect(scopeSelectorPrelude("button", "data-test")).toBe("button[data-test]");
+    expect(scopeSelectorPrelude("x-card", "data-test")).toBe("x-card[data-test]");
+    expect(scopeSelectorPrelude("&", "data-test")).toBe("&[data-test]");
     expect(scopeSelectorPrelude(".foo, .bar", "data-test")).toBe(
       ".foo[data-test], .bar[data-test]",
     );

@@ -20,6 +20,7 @@ import {
   loweredNormalizedNestedMixedSource,
   loweredNormalizedNestedSelectorSource,
   mixedRealisticScopedSource,
+  nestedAtRuleParityCases,
   nestedAtRuleScopedSource,
   nestedMixedScopedSource,
   nestedSelectorScopedSource,
@@ -44,7 +45,11 @@ const deepSlottedGlobalSelectorAnalysis = analyzeLightningCssStyle(
   "data-v-bench",
 );
 const mixedRealisticAnalysis = analyzeLightningCssStyle(mixedRealisticScopedSource, "data-v-bench");
-const nestedAtRuleAnalysis = analyzeLightningCssStyle(nestedAtRuleScopedSource, "data-v-bench");
+const nestedAtRuleParityAnalyses = nestedAtRuleParityCases.map(({ label, source }) => ({
+  label,
+  source,
+  analysis: analyzeLightningCssStyle(source, "data-v-bench"),
+}));
 const nestedSelectorAnalysis = analyzeLightningCssStyle(nestedSelectorScopedSource, "data-v-bench");
 const nestedMixedAnalysis = analyzeLightningCssStyle(nestedMixedScopedSource, "data-v-bench");
 const normalizedNestedSelectorAnalysis = analyzeLightningCssStyle(
@@ -224,6 +229,18 @@ describe("lightningcss micro: mixed realistic source path", () => {
   });
 });
 
+describe("lightningcss micro: nested at-rule source preparation by selector shape", () => {
+  for (const { label, source, analysis } of nestedAtRuleParityAnalyses) {
+    bench(`analyze style ${label}`, () => {
+      analyzeLightningCssStyle(source, "data-v-bench");
+    });
+
+    bench(`scope source ${label}`, () => {
+      scopeLightningCssSource(source, "data-v-bench", deriveSourceScopeMode(analysis));
+    });
+  }
+});
+
 describe("lightningcss micro: nested selector normalization", () => {
   bench("transform + include nesting nested selectors", () => {
     transformWithLightningCss(nestedSelectorScopedSource, {
@@ -296,18 +313,6 @@ describe("lightningcss micro: nested selector normalization", () => {
 });
 
 describe("lightningcss micro: nested at-rule normalization", () => {
-  bench("analyze style nested at-rules", () => {
-    analyzeLightningCssStyle(nestedAtRuleScopedSource, "data-v-bench");
-  });
-
-  bench("scope source nested at-rules", () => {
-    scopeLightningCssSource(
-      nestedAtRuleScopedSource,
-      "data-v-bench",
-      deriveSourceScopeMode(nestedAtRuleAnalysis),
-    );
-  });
-
   bench("scope source normalized nested at-rules", () => {
     scopeLightningCssSource(
       normalizedNestedAtRuleSource,

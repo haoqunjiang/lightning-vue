@@ -6,7 +6,7 @@ import {
   compileWith,
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleScopedSource,
+  nestedAtRuleParityCases,
   nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
@@ -58,15 +58,17 @@ describe("compileStyle comparison: parity cases", () => {
     });
   });
 
-  describe("nested at-rules", () => {
-    bench("lightningcss nested at-rules", () => {
-      compileWith(compileStyleWithLightningCss, nestedAtRuleScopedSource);
-    });
+  for (const { label, source } of nestedAtRuleParityCases) {
+    describe(label, () => {
+      bench(`lightningcss ${label}`, () => {
+        compileWith(compileStyleWithLightningCss, source);
+      });
 
-    bench("postcss nested at-rules", () => {
-      compileWith(compileStyle, nestedAtRuleScopedSource);
+      bench(`postcss ${label}`, () => {
+        compileWith(compileStyle, source);
+      });
     });
-  });
+  }
 
   describe("mixed nested selectors and at-rules", () => {
     bench("lightningcss mixed nested selectors and at-rules", () => {

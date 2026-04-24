@@ -36,11 +36,52 @@ const nonAsciiThreshold = "\u00A0".charCodeAt(0);
  * not understand. Callers can then fall back to a parsed-selector rewrite.
  *
  * This API is useful beyond Vue whenever a transform needs a very fast
- * source-to-source rewrite for "boring" selectors and can accept a slower
+ * source-to-source rewrite for simple selectors and can accept a slower
  * fallback for the rest.
  */
 export function scopeSelectorPrelude(prelude: string, id: string): string | undefined {
+  const simplePrelude = scopeSingleComponentSelectorPrelude(prelude, id);
+  if (simplePrelude !== undefined) {
+    return simplePrelude;
+  }
+
   return new DirectSelectorPreludeScoper(prelude, id).rewriteSelectorList();
+}
+
+function scopeSingleComponentSelectorPrelude(prelude: string, id: string): string | undefined {
+  let start = 0;
+  let end = prelude.length;
+
+  while (start < end && isWhitespace(prelude[start])) {
+    start++;
+  }
+  while (end > start && isWhitespace(prelude[end - 1])) {
+    end--;
+  }
+  if (start === end) {
+    return;
+  }
+
+  let index = start;
+  const first = prelude[index];
+  if (first === "&") {
+    return index + 1 === end ? `&[${id}]` : undefined;
+  }
+
+  if (first === "." || first === "#") {
+    index++;
+  }
+
+  if (!isIdentifierStart(prelude[index])) {
+    return;
+  }
+
+  index++;
+  while (index < end && isIdentifierContinue(prelude[index])) {
+    index++;
+  }
+
+  return index === end ? `${prelude.slice(start, end)}[${id}]` : undefined;
 }
 
 class DirectSelectorPreludeScoper {
@@ -471,9 +512,9 @@ class DirectSelectorPreludeScoper {
   }
 }
 
-// The direct source path intentionally accepts a narrower identifier subset
-// than the full selector parser, so these stay local instead of reusing the
-// broader parser helpers.
+// The direct source path accepts a narrower identifier subset than the full
+// selector parser, so these stay local instead of reusing broader parser
+// helpers.
 function isIdentifierStart(char: string | undefined): char is string {
   const code = char == null ? -1 : char.charCodeAt(0);
   return (

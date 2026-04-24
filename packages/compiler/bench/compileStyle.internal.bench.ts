@@ -5,7 +5,7 @@ import {
   compileWith,
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleScopedSource,
+  nestedAtRuleParityCases,
   nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
@@ -21,9 +21,11 @@ describe("compileStyle internal: lightningcss end to end", () => {
     compileWith(compileStyleWithLightningCss, simpleScopedSource);
   });
 
-  bench("lightningcss nested at-rules", () => {
-    compileWith(compileStyleWithLightningCss, nestedAtRuleScopedSource);
-  });
+  for (const { label, source } of nestedAtRuleParityCases) {
+    bench(`lightningcss ${label}`, () => {
+      compileWith(compileStyleWithLightningCss, source);
+    });
+  }
 
   bench("lightningcss mixed nested selectors and at-rules", () => {
     compileWith(compileStyleWithLightningCss, nestedMixedScopedSource);

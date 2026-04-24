@@ -1,4 +1,5 @@
 import {
+  type CssSelectorSourceRewriteOptions,
   rewriteCssSelectorSource,
   rewriteCssSelectorSourceWithMap,
   scopeSelectorPrelude,
@@ -7,22 +8,17 @@ import type { RawSourceMap } from "@vue/compiler-core";
 import merge from "merge-source-map";
 import type { SourceScopeMode } from "../analysis";
 import { scopeCarrierParserOptions } from "../scopeCarriers";
+import { getShortScopeId } from "../../scopeId";
 import { createScopedStyleTransformContext } from "./context";
 import { appendRewrittenScopedSelectors } from "./rewrite";
+import type { ScopedStyleTransformContext } from "./types";
 
 export function scopeLightningCssSource(
   source: string,
   id: string,
   mode: SourceScopeMode = "parsed",
 ): string {
-  const context = createScopedStyleTransformContext({ id });
-
-  return rewriteCssSelectorSource(source, {
-    tryRewritePreludeDirect: createSourcePreludeDirectRewrite(mode, context.id),
-    parserOptions: scopeCarrierParserOptions,
-    appendRewrittenSelectors: (selector, target) =>
-      appendRewrittenScopedSelectors(selector, context, target),
-  });
+  return rewriteCssSelectorSource(source, createSourceRewriteOptions(id, mode));
 }
 
 export interface ScopeLightningCssSourceWithMapResult {
@@ -37,19 +33,29 @@ export function scopeLightningCssSourceWithMap(
   mode: SourceScopeMode = "parsed",
   map?: RawSourceMap,
 ): ScopeLightningCssSourceWithMapResult {
-  const context = createScopedStyleTransformContext({ id });
   return rewriteCssSelectorSourceWithMap<RawSourceMap>(
     source,
     filename,
-    {
-      tryRewritePreludeDirect: createSourcePreludeDirectRewrite(mode, context.id),
-      parserOptions: scopeCarrierParserOptions,
-      appendRewrittenSelectors: (selector, target) =>
-        appendRewrittenScopedSelectors(selector, context, target),
-    },
+    createSourceRewriteOptions(id, mode),
     map,
     (currentMap, nextMap) => merge(currentMap, nextMap) as RawSourceMap,
   );
+}
+
+function createSourceRewriteOptions(
+  id: string,
+  mode: SourceScopeMode,
+): CssSelectorSourceRewriteOptions {
+  const scopeId = `data-v-${getShortScopeId(id)}`;
+  let context: ScopedStyleTransformContext | undefined;
+  const getContext = () => (context ??= createScopedStyleTransformContext({ id }));
+
+  return {
+    tryRewritePreludeDirect: createSourcePreludeDirectRewrite(mode, scopeId),
+    parserOptions: scopeCarrierParserOptions,
+    appendRewrittenSelectors: (selector, target) =>
+      appendRewrittenScopedSelectors(selector, getContext(), target),
+  };
 }
 
 function createSourcePreludeDirectRewrite(

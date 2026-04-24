@@ -3,7 +3,7 @@ import {
   animationScopedSource,
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleScopedSource,
+  nestedAtRuleParityCases,
   nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
@@ -32,9 +32,11 @@ describe("lightningcss baseline: raw engine throughput", () => {
     transformWithLightningCss(deepSlottedGlobalSelectorSource);
   });
 
-  bench("lightningcss nested at-rules", () => {
-    transformWithLightningCss(nestedAtRuleScopedSource);
-  });
+  for (const { label, source } of nestedAtRuleParityCases) {
+    bench(`lightningcss ${label}`, () => {
+      transformWithLightningCss(source);
+    });
+  }
 
   bench("lightningcss mixed nested selectors and at-rules", () => {
     transformWithLightningCss(nestedMixedScopedSource);
@@ -70,9 +72,11 @@ describe("lightningcss baseline: no-op visitor throughput", () => {
     transformWithLightningCssNoOpVisitor(deepSlottedGlobalSelectorSource);
   });
 
-  bench("lightningcss nested at-rules", () => {
-    transformWithLightningCssNoOpVisitor(nestedAtRuleScopedSource);
-  });
+  for (const { label, source } of nestedAtRuleParityCases) {
+    bench(`lightningcss ${label}`, () => {
+      transformWithLightningCssNoOpVisitor(source);
+    });
+  }
 
   bench("lightningcss mixed nested selectors and at-rules", () => {
     transformWithLightningCssNoOpVisitor(nestedMixedScopedSource);

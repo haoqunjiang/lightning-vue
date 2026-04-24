@@ -7,7 +7,7 @@ import {
   compileWith,
   deepSlottedGlobalSelectorSource,
   mixedRealisticScopedSource,
-  nestedAtRuleScopedSource,
+  nestedAtRuleParityCases,
   nestedMixedScopedSource,
   nestedSelectorScopedSource,
   nestedWrappedDeepSlottedSelectorScopedSource,
@@ -34,14 +34,16 @@ function compilePair(source: string) {
 }
 
 describe("compileStyle compare benchmark labels", () => {
-  test.each([
+  const parityCases: Array<[string, string]> = [
     ["simple selectors", simpleScopedSource],
     [":deep() / :slotted() / :global() selectors", deepSlottedGlobalSelectorSource],
     ["animation keyframes", animationScopedSource],
     ["nested selectors", nestedSelectorScopedSource],
-    ["nested at-rules", nestedAtRuleScopedSource],
+    ...nestedAtRuleParityCases.map(({ label, source }): [string, string] => [label, source]),
     ["mixed nested selectors and at-rules", nestedMixedScopedSource],
-  ])("%s still matches after normalization", (_label, source) => {
+  ];
+
+  test.each(parityCases)("%s still matches after normalization", (_label, source) => {
     const { postcss, lightningcss } = compilePair(source);
     expect(lightningcss).toBe(postcss);
   });

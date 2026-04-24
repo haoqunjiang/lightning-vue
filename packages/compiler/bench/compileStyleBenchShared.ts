@@ -57,10 +57,11 @@ export const animationScopedSource = Array.from({ length: 20 }, (_, index) =>
   ].join("\n"),
 ).join("\n");
 
-export const nestedAtRuleScopedSource = Array.from(
-  { length: 40 },
-  (_, index) =>
-    `.card-${index} {
+function createNestedAtRuleScopedSource(selectorForIndex: (index: number) => string, length = 40) {
+  return Array.from(
+    { length },
+    (_, index) =>
+      `${selectorForIndex(index)} {
   color: red;
   @media (max-width: 800px) {
     color: blue;
@@ -72,7 +73,64 @@ export const nestedAtRuleScopedSource = Array.from(
     color: green;
   }
 }`,
+  ).join("\n");
+}
+
+export const nestedAtRuleSimpleSelectorScopedSource = createNestedAtRuleScopedSource(
+  (index) => `.card-${index}`,
+);
+
+export const nestedAtRuleCompoundSelectorScopedSource = createNestedAtRuleScopedSource(
+  (index) => `.card-${index}.is-active-${index}[data-state="open"]`,
+);
+
+export const nestedAtRuleDescendantSelectorScopedSource = createNestedAtRuleScopedSource(
+  (index) => `.layout-${index} .card-${index} > .body-${index}`,
+);
+
+export const nestedAtRuleRealisticSelectorScopedSource = Array.from({ length: 30 }, (_, index) =>
+  [
+    `.layout-${index} > .panel-${index}:where([data-open]) {
+  color: red;
+  @media (max-width: 800px) {
+    color: blue;
+  }
+  @supports (display: grid) {
+    display: grid;
+  }
+}`,
+    `.toolbar-${index} :is(button, a)[aria-current="page"] {
+  color: green;
+  @media (hover: hover) {
+    color: black;
+  }
+  @container toolbar-${index} (inline-size > 32rem) {
+    color: purple;
+  }
+}`,
+  ].join("\n"),
 ).join("\n");
+
+export const nestedAtRuleScopedSource = nestedAtRuleSimpleSelectorScopedSource;
+
+export const nestedAtRuleParityCases = [
+  {
+    label: "nested at-rules with simple selectors",
+    source: nestedAtRuleSimpleSelectorScopedSource,
+  },
+  {
+    label: "nested at-rules with compound selectors",
+    source: nestedAtRuleCompoundSelectorScopedSource,
+  },
+  {
+    label: "nested at-rules with descendant selectors",
+    source: nestedAtRuleDescendantSelectorScopedSource,
+  },
+  {
+    label: "nested at-rules with realistic selectors",
+    source: nestedAtRuleRealisticSelectorScopedSource,
+  },
+] as const;
 
 export const nestedMixedScopedSource = Array.from(
   { length: 30 },
