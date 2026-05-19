@@ -4,7 +4,7 @@ packages:
   - tools/*
 
 allowBuilds:
-  '@parcel/watcher': true
+  "@parcel/watcher": true
 
 catalog:
   "@types/node": ^24
