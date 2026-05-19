@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@lightning-vue/compiler": "workspace:*",
-    "lightningcss-wasm": "^1.30.2",
+    "lightningcss-wasm": "^1.32.0",
     "monaco-editor": "^0.55.1",
     "prismjs": "^1.30.0",
     "vue": "catalog:"
