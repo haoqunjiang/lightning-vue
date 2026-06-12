@@ -93,7 +93,7 @@
   },
   "devDependencies": {
     "lightningcss": "^1.32.0",
-    "sass": "^1.99.0"
+    "sass": "^1.100.0"
   },
   "peerDependencies": {
     "lightningcss": "^1.32.0"
