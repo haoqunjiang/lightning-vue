@@ -15,8 +15,8 @@ catalog:
   vue: ^3.5.38
   bumpp: ^11.1.0
   typescript: ^6.0.3
-  vite: npm:@voidzero-dev/vite-plus-core@0.1.24
-  vite-plus: 0.1.24
+  vite: npm:@voidzero-dev/vite-plus-core@0.3.1
+  vite-plus: 0.3.1
   vitest: npm:@voidzero-dev/vite-plus-test@0.1.24
 
 catalogMode: prefer
