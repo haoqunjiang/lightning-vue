@@ -92,8 +92,8 @@
     "merge-source-map": "^1.1.0"
   },
   "devDependencies": {
-    "lightningcss": "^1.32.0",
-    "sass": "^1.100.0"
+    "lightningcss": "^1.33.0",
+    "sass": "^1.104.0"
   },
   "peerDependencies": {
     "lightningcss": "^1.32.0"
