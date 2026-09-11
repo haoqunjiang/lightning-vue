@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@vitejs/plugin-vue": "^6.0.7",
+    "@vitejs/plugin-vue": "^6.0.8",
     "bumpp": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
