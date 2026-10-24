@@ -10,14 +10,14 @@
   },
   "dependencies": {
     "@lightning-vue/compiler": "workspace:*",
-    "lightningcss-wasm": "^1.32.0",
+    "lightningcss-wasm": "^1.33.0",
     "monaco-editor": "^0.55.1",
     "prismjs": "^1.30.0",
     "vue": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",
-    "lightningcss": "^1.32.0",
+    "lightningcss": "^1.33.0",
     "vite": "catalog:",
     "vite-plus": "catalog:"
   }
