@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@lightning-vue/compiler": "latest",
-    "lightningcss": "^1.32.0",
+    "lightningcss": "^1.33.0",
     "vue": "latest"
   },
   "devDependencies": {
